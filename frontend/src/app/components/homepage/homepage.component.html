@@ -1,0 +1,5 @@
+<div class="homepage">
+    <app-header (noteSelected)="onNoteSelected($event)" (actionSelected)="onActionSelected($event)"></app-header>
+    <app-main-section [selectedNoteId]="selectedNoteId" [selectedAction]="selectedAction"></app-main-section>
+  </div>
+  
