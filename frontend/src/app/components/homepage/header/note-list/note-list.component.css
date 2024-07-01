@@ -1,0 +1,20 @@
+.note-list {
+    flex: 1;
+    overflow-y: auto;
+  }
+  
+  .note-list ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .note-list li {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .note-list li:hover {
+    background-color: #e0e0e0;
+  }
+  

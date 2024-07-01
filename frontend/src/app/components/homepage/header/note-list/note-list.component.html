@@ -1,0 +1,8 @@
+<div class="note-list">
+    <ul>
+      <li *ngFor="let note of notes" (click)="onNoteClick(note.id)">
+        {{ note.title }}
+      </li>
+    </ul>
+  </div>
+  
