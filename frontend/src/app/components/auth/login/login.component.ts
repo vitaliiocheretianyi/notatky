@@ -15,12 +15,12 @@ export class LoginComponent {
   @Output() login = new EventEmitter<{ email: string; password: string }>();
   @Input() error: string | null = null;
 
-  email: string = '';
+  usernameOrEmail: string = '';
   password: string = '';
 
   constructor(private router: Router) {}
 
   onSubmit() {
-    this.login.emit({ email: this.email, password: this.password });
+    this.login.emit({ email: this.usernameOrEmail, password: this.password });
   }
 }
