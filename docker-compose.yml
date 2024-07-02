@@ -10,6 +10,8 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+    environment:
+      - BACKEND_URL=http://localhost:8080
 
   backend:
     build:

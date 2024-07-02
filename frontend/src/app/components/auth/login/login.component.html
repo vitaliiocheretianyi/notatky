@@ -1,10 +1,9 @@
 <div class="login-form">
-    <form (ngSubmit)="onSubmit()">
-      <input type="email" placeholder="Email" [(ngModel)]="email" name="email" required />
-      <input type="password" placeholder="Password" [(ngModel)]="password" name="password" required />
-      <button type="submit">Login</button>
-    </form>
-    <button (click)="switchMode.emit()">Switch to Register</button>
-    <div *ngIf="error" class="error">{{ error }}</div>
-  </div>
-  
+  <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+    <input type="text" placeholder="Username or Email" [(ngModel)]="usernameOrEmail" name="usernameOrEmail" required />
+    <input type="password" placeholder="Password" [(ngModel)]="password" name="password" required />
+    <button type="submit" [disabled]="!loginForm.form.valid">Login</button>
+  </form>
+  <button (click)="switchMode.emit()">Switch to Register</button>
+  <div *ngIf="error" class="error">{{ error }}</div>
+</div>
