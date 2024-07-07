@@ -11,7 +11,6 @@ import lombok.AllArgsConstructor;
 @Entity
 @Table(name = "note_children")
 public class NoteChild {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

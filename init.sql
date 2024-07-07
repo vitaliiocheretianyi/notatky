@@ -1,50 +1,50 @@
 -- User table
-CREATE TABLE IF NOT EXISTS User (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL
 );
 
 -- Note table
-CREATE TABLE IF NOT EXISTS Note (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS notes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL
 );
 
 -- UserNote relationship table
-CREATE TABLE IF NOT EXISTS UserNote (
-    user_id INT,
-    note_id INT,
-    PRIMARY KEY (user_id, note_id),
-    FOREIGN KEY (user_id) REFERENCES User(id),
-    FOREIGN KEY (note_id) REFERENCES Note(id)
+CREATE TABLE IF NOT EXISTS user_notes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    note_id BIGINT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (note_id) REFERENCES notes(id)
 );
 
 -- TextNode table
-CREATE TABLE IF NOT EXISTS TextNode (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS text_nodes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     content TEXT NOT NULL
 );
 
 -- ImageNode table
-CREATE TABLE IF NOT EXISTS ImageNode (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS image_nodes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     image_path VARCHAR(255) NOT NULL
 );
 
 -- NoteChild relationship table
-CREATE TABLE IF NOT EXISTS NoteChild (
-    note_id INT,
-    child_id INT,
+CREATE TABLE IF NOT EXISTS note_children (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    note_id BIGINT NOT NULL,
     type VARCHAR(50) NOT NULL,
-    PRIMARY KEY (note_id, child_id),
-    FOREIGN KEY (note_id) REFERENCES Note(id)
+    child_id BIGINT NOT NULL,
+    FOREIGN KEY (note_id) REFERENCES notes(id)
 );
 
 -- Additional constraints to enforce polymorphic relationships in NoteChild
-ALTER TABLE NoteChild
+ALTER TABLE note_children
 ADD CONSTRAINT fk_textnode FOREIGN KEY (child_id)
-REFERENCES TextNode(id) ON DELETE CASCADE,
+REFERENCES text_nodes(id) ON DELETE CASCADE,
 ADD CONSTRAINT fk_imagenode FOREIGN KEY (child_id)
-REFERENCES ImageNode(id) ON DELETE CASCADE;
+REFERENCES image_nodes(id) ON DELETE CASCADE;

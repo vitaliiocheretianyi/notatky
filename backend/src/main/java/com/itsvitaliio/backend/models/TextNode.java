@@ -11,7 +11,6 @@ import lombok.AllArgsConstructor;
 @Entity
 @Table(name = "text_nodes")
 public class TextNode {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
