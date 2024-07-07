@@ -17,7 +17,7 @@ RUN ./mvnw dependency:go-offline
 COPY src src
 
 # Install the Spring Boot dev tools
-RUN ./mvnw install
+RUN ./mvnw clean install
 
 # Stage 2: Run stage
 FROM openjdk:17.0.1

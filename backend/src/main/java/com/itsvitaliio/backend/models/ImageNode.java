@@ -11,7 +11,6 @@ import lombok.AllArgsConstructor;
 @Entity
 @Table(name = "image_nodes")
 public class ImageNode {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

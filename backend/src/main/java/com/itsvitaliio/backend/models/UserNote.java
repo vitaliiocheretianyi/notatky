@@ -11,7 +11,6 @@ import lombok.AllArgsConstructor;
 @Entity
 @Table(name = "user_notes")
 public class UserNote {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
