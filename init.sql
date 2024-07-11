@@ -1,6 +1,9 @@
+CREATE DATABASE IF NOT EXISTS Notatky;
+USE Notatky;
+
 -- User table
 CREATE TABLE IF NOT EXISTS users (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id VARCHAR(255) PRIMARY KEY,
     username VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL
@@ -15,7 +18,7 @@ CREATE TABLE IF NOT EXISTS notes (
 -- UserNote relationship table
 CREATE TABLE IF NOT EXISTS user_notes (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
     note_id BIGINT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (note_id) REFERENCES notes(id)
