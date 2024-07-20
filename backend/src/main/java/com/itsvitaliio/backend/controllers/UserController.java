@@ -1,42 +1,92 @@
 package com.itsvitaliio.backend.controllers;
 
+import com.itsvitaliio.backend.dto.*;
+import com.itsvitaliio.backend.services.UserService;
+import com.itsvitaliio.backend.utilities.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.itsvitaliio.backend.dto.ChangeEmailRequest;
-import com.itsvitaliio.backend.dto.ChangePasswordRequest;
-import com.itsvitaliio.backend.dto.ChangeUsernameRequest;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/notatky/user")
+@RequestMapping("/notatky")
 public class UserController {
 
-    @PutMapping("/change-username")
-    public ResponseEntity<?> changeUsername(@RequestBody ChangeUsernameRequest request) {
-        // Change username logic
+    private final UserService userService;
+    private final JwtUtil jwtUtil;
+
+    @Autowired
+    public UserController(UserService userService, JwtUtil jwtUtil) {
+        this.userService = userService;
+        this.jwtUtil = jwtUtil;
+    }
+
+    private String getUserIdFromToken(HttpServletRequest request) {
+        final String authorizationHeader = request.getHeader("Authorization");
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            String jwt = authorizationHeader.substring(7);
+            return jwtUtil.extractUserId(jwt);
+        }
         return null;
+    }
+
+    @PutMapping("/change-username")
+    public ResponseEntity<?> changeUsername(HttpServletRequest request, @RequestBody ChangeUsernameRequest changeUsernameRequest) {
+        String userId = getUserIdFromToken(request);
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+
+        try {
+            userService.changeUsername(userId, changeUsernameRequest);
+            return ResponseEntity.ok("Username changed successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(e.getMessage());
+        }
     }
 
     @PutMapping("/change-email")
-    public ResponseEntity<?> changeEmail(@RequestBody ChangeEmailRequest request) {
-        // Change email logic
-        return null;
+    public ResponseEntity<?> changeEmail(HttpServletRequest request, @RequestBody ChangeEmailRequest changeEmailRequest) {
+        String userId = getUserIdFromToken(request);
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+
+        try {
+            userService.changeEmail(userId, changeEmailRequest);
+            return ResponseEntity.ok("Email changed successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(e.getMessage());
+        }
     }
 
     @PutMapping("/change-password")
-    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
-        // Change password logic
-        return null;
+    public ResponseEntity<?> changePassword(HttpServletRequest request, @RequestBody ChangePasswordRequest changePasswordRequest) {
+        String userId = getUserIdFromToken(request);
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+
+        try {
+            String newToken = userService.changePassword(userId, changePasswordRequest);
+            return ResponseEntity.ok("Password changed successfully. New Token: " + newToken);
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(e.getMessage());
+        }
     }
 
     @DeleteMapping("/delete-account")
-    public ResponseEntity<?> deleteAccount(@RequestParam Long userId) {
-        // Delete account logic
-        return null;
+    public ResponseEntity<?> deleteAccount(HttpServletRequest request) {
+        String userId = getUserIdFromToken(request);
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+
+        try {
+            userService.deleteUserAccount(userId);
+            return ResponseEntity.ok("Account deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(e.getMessage());
+        }
     }
 }

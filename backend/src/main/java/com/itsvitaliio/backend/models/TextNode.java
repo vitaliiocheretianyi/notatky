@@ -1,5 +1,7 @@
 package com.itsvitaliio.backend.models;
 
+import java.util.UUID;
+
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,9 +14,16 @@ import lombok.AllArgsConstructor;
 @Table(name = "text_nodes")
 public class TextNode {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id = UUID.randomUUID().toString();
 
-    @Column(nullable = false)
+    @Column(name = "content", nullable = false)
     private String content;
+
+    @Override
+    public String toString() {
+        return "TextNode{" +
+                "id='" + id + '\'' +
+                ", content='" + content + '\'' +
+                '}';
+    }
 }

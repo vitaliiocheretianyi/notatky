@@ -1,4 +1,5 @@
 package com.itsvitaliio.backend.dto;
+
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -7,6 +8,7 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AddTextEntryRequest {
-    private Long noteId;
+    private String noteId;
     private String text;
+    private Integer position;  // Rename field to position
 }

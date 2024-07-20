@@ -1,49 +1,38 @@
 package com.itsvitaliio.backend.filter;
 
-import org.springframework.stereotype.Component;
-import com.itsvitaliio.backend.utilities.RequestWrapper;
-
-import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.FilterConfig;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
 import java.io.IOException;
-import java.util.Enumeration;
 
 @Component
-public class LoggingFilter implements Filter {
+public class LoggingFilter extends OncePerRequestFilter {
 
     @Override
-    public void init(FilterConfig filterConfig) throws ServletException {
-        // Initialization logic if needed
-    }
-
-    @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-            throws IOException, ServletException {
-        HttpServletRequest httpRequest = (HttpServletRequest) request;
-        RequestWrapper requestWrapper = new RequestWrapper(httpRequest);
-
-        System.out.println("Incoming request: " + httpRequest.getMethod() + " " + httpRequest.getRequestURI());
-        System.out.println("Headers:");
-        Enumeration<String> headerNames = httpRequest.getHeaderNames();
-        while (headerNames.hasMoreElements()) {
-            String headerName = headerNames.nextElement();
-            System.out.println(headerName + ": " + httpRequest.getHeader(headerName));
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        try {
+            if (!isMultipartContent(request)) {
+                // For non-multipart requests, wrap the request for logging
+                //System.out.println("is NOT multipart");
+                // RequestWrapper wrappedRequest = new RequestWrapper(request);
+                // filterChain.doFilter(wrappedRequest, response);
+                filterChain.doFilter(request, response);
+            } else {
+                // For multipart requests, proceed without wrapping
+                //System.out.println("IS MULTIPART");
+                filterChain.doFilter(request, response);
+            }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
-
-        System.out.println("Body:");
-        System.out.println(requestWrapper.getBody());
-
-        // Continue with the next filter in the chain or the target resource
-        chain.doFilter(requestWrapper, response);
     }
 
-    @Override
-    public void destroy() {
-        // Cleanup logic if needed
+    private boolean isMultipartContent(HttpServletRequest request) {
+        return request.getContentType() != null && request.getContentType().toLowerCase().startsWith("multipart/");
     }
 }

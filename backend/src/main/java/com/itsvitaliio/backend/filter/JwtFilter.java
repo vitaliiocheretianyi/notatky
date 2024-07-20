@@ -36,18 +36,28 @@ public class JwtFilter extends OncePerRequestFilter {
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwt = authorizationHeader.substring(7);
             userId = jwtUtil.extractUserId(jwt);
+
+            System.out.println("Authenticating user " + userId);
         }
 
         if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userService.loadUserByUsername(userId);
-
-            if (jwtUtil.validateToken(jwt)) {
-                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                usernamePasswordAuthenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+            try {
+                UserDetails userDetails = userService.loadUserById(userId);
+                if (jwtUtil.validateToken(jwt)) {
+                    System.out.println("Token valid.");
+                    UsernamePasswordAuthenticationToken authenticationToken =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                    System.out.println("User authenticated.");
+                }else{
+                    System.out.println("Token Expired!");
+                }
+            } catch (Exception ex) {
+                System.out.println("User not found: " + userId);
             }
         }
         filterChain.doFilter(request, response);
     }
 }
+

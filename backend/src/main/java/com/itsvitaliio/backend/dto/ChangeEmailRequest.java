@@ -7,6 +7,5 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChangeEmailRequest {
-    private Long userId;
     private String newEmail;
 }

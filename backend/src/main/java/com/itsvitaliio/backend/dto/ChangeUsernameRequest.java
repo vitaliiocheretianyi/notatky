@@ -7,6 +7,5 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChangeUsernameRequest {
-    private Long userId;
     private String newUsername;
 }

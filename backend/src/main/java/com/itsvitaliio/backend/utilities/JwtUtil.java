@@ -14,6 +14,7 @@ public class JwtUtil {
 
     @Value("${jwt.secret}")
     private String secret;
+    
 
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());

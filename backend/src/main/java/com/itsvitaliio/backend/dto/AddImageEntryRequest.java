@@ -1,4 +1,5 @@
 package com.itsvitaliio.backend.dto;
+
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -7,6 +8,12 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AddImageEntryRequest {
-    private Long noteId;
+    private String noteId; // Change to String
     private String imageUrl;
+    private Integer position;
+
+    public AddImageEntryRequest(String noteId, String imageUrl) {
+        this.noteId = noteId;
+        this.imageUrl = imageUrl;
+    }
 }

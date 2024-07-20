@@ -22,4 +22,13 @@ public class UserNote {
     @ManyToOne
     @JoinColumn(name = "note_id", nullable = false)
     private Note note;
+    
+    @Override
+    public String toString() {
+        return "UserNote{" +
+                "id=" + id +
+                ", user=" + user +
+                ", note=" + note +
+                '}';
+    }
 }

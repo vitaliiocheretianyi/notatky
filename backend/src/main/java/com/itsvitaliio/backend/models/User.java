@@ -22,4 +22,14 @@ public class User {
     public Set<String> getRoles() {
         return roles;
     }
+    
+    @Override
+    public String toString() {
+        return "User{" +
+                "id='" + id + '\'' +
+                ", username='" + username + '\'' +
+                ", email='" + email + '\'' +
+                ", roles=" + roles +
+                '}';
+    }
 }

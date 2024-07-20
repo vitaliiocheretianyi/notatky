@@ -7,7 +7,5 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChangePasswordRequest {
-    private Long userId;
-    private String oldPassword;
     private String newPassword;
 }

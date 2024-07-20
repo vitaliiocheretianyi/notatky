@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
+import java.util.UUID;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -12,16 +14,29 @@ import lombok.AllArgsConstructor;
 @Table(name = "note_children")
 public class NoteChild {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id = UUID.randomUUID().toString();
 
     @ManyToOne
     @JoinColumn(name = "note_id", nullable = false)
     private Note note;
 
-    @Column(nullable = false)
+    @Column(name = "type", nullable = false)
     private String type;
 
-    @Column(nullable = false)
-    private Long childId;
+    @Column(name = "child_id", nullable = false)
+    private String childId;
+
+    @Column(name = "position", nullable = false)  // Rename column to position
+    private Integer position;
+    
+    @Override
+    public String toString() {
+        return "NoteChild{" +
+                "id='" + id + '\'' +
+                ", note=" + note +
+                ", type='" + type + '\'' +
+                ", childId='" + childId + '\'' +
+                ", position=" + position +
+                '}';
+    }
 }
