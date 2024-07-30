@@ -46,6 +46,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
       title: [''],
       contents: this.fb.array([])
     });
+    this.setFormValueChanges(); // Initialize value changes detection
   }
 
   loadNote() {
@@ -57,7 +58,6 @@ export class MainSectionComponent implements OnInit, OnChanges {
       this.loadNoteChildren(note.contents);
       setTimeout(() => {
         this.initialLoad = false;
-        this.setFormValueChanges();
       }, 0);
     }
   }
@@ -85,11 +85,15 @@ export class MainSectionComponent implements OnInit, OnChanges {
     }
 
     this.noteForm.setControl('contents', contentsArray);
+    this.setFormValueChanges(); // Reset value changes detection after loading children
   }
 
   setFormValueChanges() {
+    if (!this.noteForm) return; // Ensure form is initialized
+
     this.noteForm.get('title')?.valueChanges.pipe(debounceTime(300)).subscribe(() => {
       if (!this.initialLoad) {
+        console.log('Title changed:', this.noteForm.value.title);
         this.handleTitleChange();
       }
     });
@@ -97,6 +101,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
     this.contents.controls.forEach((control, index) => {
       control.valueChanges.pipe(debounceTime(300)).subscribe(() => {
         if (!this.initialLoad) {
+          console.log(`Content at index ${index} changed:`, control.value);
           this.handleTextChange(index);
         }
       });
@@ -126,6 +131,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
 
   handleTitleChange() {
     if (this.noteForm.value.title !== this.originalTitle) {
+      console.log('Saving title:', this.noteForm.value.title);
       this.saveNoteTitle();
     }
   }
@@ -133,6 +139,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
   handleTextChange(contentIndex: number) {
     const contentControl = this.contents.at(contentIndex) as FormControl;
     if (contentControl.value.trim() !== this.originalContent[contentIndex]) {
+      console.log(`Saving text entry at index ${contentIndex}:`, contentControl.value);
       this.saveTextEntry(contentIndex);
     }
   }
