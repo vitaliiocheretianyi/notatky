@@ -11,7 +11,9 @@ import com.itsvitaliio.backend.dto.*;
 import com.itsvitaliio.backend.exceptions.InvalidEntryException;
 import com.itsvitaliio.backend.exceptions.NoteNotFoundException;
 import com.itsvitaliio.backend.models.Note;
+import com.itsvitaliio.backend.models.NoteChild;
 import com.itsvitaliio.backend.services.ImageNodeService;
+import com.itsvitaliio.backend.services.NoteChildService;
 import com.itsvitaliio.backend.services.NoteService;
 import com.itsvitaliio.backend.services.TextNodeService;
 import com.itsvitaliio.backend.utilities.JwtUtil;
@@ -26,14 +28,16 @@ public class NoteController {
     private final NoteService noteService;
     private final TextNodeService textNodeService;
     private final ImageNodeService imageNodeService;
+    private final NoteChildService noteChildService;
     private final ObjectMapper objectMapper;
 
-    public NoteController(JwtUtil jwtUtil, NoteService noteService, TextNodeService textNodeService, ImageNodeService imageNodeService, ObjectMapper objectMapper) {
+    public NoteController(JwtUtil jwtUtil, NoteService noteService, TextNodeService textNodeService, ImageNodeService imageNodeService, NoteChildService noteChildService, ObjectMapper objectMapper) {
         this.jwtUtil = jwtUtil;
         this.noteService = noteService;
         this.textNodeService = textNodeService;
         this.imageNodeService = imageNodeService;
         this.objectMapper = objectMapper;
+        this.noteChildService = noteChildService;
     }
 
     private String getUserIdFromToken(HttpServletRequest request) {
@@ -56,20 +60,37 @@ public class NoteController {
             Note createdNote = noteService.createNoteWithUserAssociation(userId, noteRequest);
             return ResponseEntity.ok(createdNote);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Internal Server Error");
+            return ResponseEntity.status(500).body("Internal Server Exrror");
         }
     }
 
     @GetMapping("/notes")
     public ResponseEntity<?> getAllNotes(HttpServletRequest request) {
+        System.out.println("Processed the request");
+        String userId = getUserIdFromToken(request);
+        if (userId == null) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+        try {
+            List<Note> notes = noteService.getAllNotesForUser(userId);
+            System.out.println("Found " + notes.size() + " for user " + userId);
+            return ResponseEntity.ok().body(notes);
+        } catch (Exception e) {
+            System.out.println("ERROR!!!!\n" + e.getMessage());
+            return ResponseEntity.status(500).body("Internal Server Error");
+        }
+    }
+
+    @GetMapping("/note/{noteId}/children")
+    public ResponseEntity<?> getNoteChildrenByNoteId(HttpServletRequest request, @PathVariable String noteId) {
         String userId = getUserIdFromToken(request);
         if (userId == null) {
             return ResponseEntity.status(401).body("Unauthorized");
         }
 
         try {
-            List<Note> notes = noteService.getAllNotesForUser(userId);
-            return ResponseEntity.ok(notes);
+            List<NoteChildDto> noteChildren = noteChildService.getNoteChildrenByNoteId(noteId);
+            return ResponseEntity.ok(noteChildren);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Internal Server Error");
         }
@@ -103,6 +124,7 @@ public class NoteController {
             textNodeService.editTextEntry(userId, textEntryRequest);
             return ResponseEntity.ok("Edited Text Entry Successfully");
         } catch (NoteNotFoundException | InvalidEntryException e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(400).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Internal Server Error");

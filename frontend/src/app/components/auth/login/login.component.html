@@ -1,6 +1,6 @@
 <div class="login-form">
   <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
-    <input type="text" placeholder="Username or Email" [(ngModel)]="usernameOrEmail" name="usernameOrEmail" required />
+    <input type="text" placeholder="Username or Email" [(ngModel)]="identifier" name="identifier" required />
     <input type="password" placeholder="Password" [(ngModel)]="password" name="password" required />
     <button type="submit" [disabled]="!loginForm.form.valid">Login</button>
   </form>

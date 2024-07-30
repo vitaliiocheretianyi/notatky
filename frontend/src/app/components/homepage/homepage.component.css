@@ -1,0 +1,22 @@
+.homepage-container {
+    display: flex;
+    flex-direction: row;
+  }
+  
+  .note-list-container {
+    width: 25%; /* Adjust as needed */
+    padding: 10px;
+    box-sizing: border-box;
+  }
+  
+  .main-section-container {
+    width: 75%; /* Adjust as needed */
+    padding: 10px;
+    box-sizing: border-box;
+  }
+  
+  button {
+    display: block;
+    margin-top: 10px;
+  }
+  

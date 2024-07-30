@@ -26,25 +26,25 @@ export class AuthComponent {
     this.error = null;
   }
 
-  onLogin(event: { email: string; password: string }) {
-    this.authService.login(event.email, event.password).subscribe(
+  onLogin(event: { identifier: string; password: string }) {
+    this.authService.login(event.identifier, event.password).subscribe(
       response => {
         this.router.navigate(['/home']);
       },
       error => {
-        this.error = 'Invalid username/email or password';
+        this.error = error; // Display the error message in the component
       }
     );
   }
 
   onRegister(event: { username: string; email: string; password: string }) {
-    const user: UserDTO = { name: event.username, email: event.email, password: event.password };
+    const user: UserDTO = { username: event.username, email: event.email, password: event.password };
     this.authService.register(user).subscribe(
       response => {
-        console.log(response);
+        this.router.navigate(['/home']);
       },
       error => {
-        this.error = error.error.message;
+        this.error = error; // Display the error message in the component
       }
     );
   }

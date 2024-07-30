@@ -1,6 +1,7 @@
 /app/src/main/java/com/itsvitaliio/backend/BackendApplication.java
 /app/src/main/java/com/itsvitaliio/backend/config/AppConfig.java
 /app/src/main/java/com/itsvitaliio/backend/config/SecurityConfig.java
+/app/src/main/java/com/itsvitaliio/backend/config/WebConfig.java
 /app/src/main/java/com/itsvitaliio/backend/controllers/AuthController.java
 /app/src/main/java/com/itsvitaliio/backend/controllers/DemoController.java
 /app/src/main/java/com/itsvitaliio/backend/controllers/NoteController.java
@@ -18,6 +19,7 @@
 /app/src/main/java/com/itsvitaliio/backend/dto/EditNoteTitleRequest.java
 /app/src/main/java/com/itsvitaliio/backend/dto/EditTextEntryRequest.java
 /app/src/main/java/com/itsvitaliio/backend/dto/LoginRequest.java
+/app/src/main/java/com/itsvitaliio/backend/dto/NoteChildDto.java
 /app/src/main/java/com/itsvitaliio/backend/dto/RegisterRequest.java
 /app/src/main/java/com/itsvitaliio/backend/dto/ServiceResponse.java
 /app/src/main/java/com/itsvitaliio/backend/exceptions/GlobalExceptionHandler.java

@@ -1,7 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-login',
@@ -12,15 +11,13 @@ import { Router } from '@angular/router';
 })
 export class LoginComponent {
   @Output() switchMode = new EventEmitter<void>();
-  @Output() login = new EventEmitter<{ email: string; password: string }>();
+  @Output() login = new EventEmitter<{ identifier: string; password: string }>();
   @Input() error: string | null = null;
 
-  usernameOrEmail: string = '';
+  identifier: string = '';
   password: string = '';
 
-  constructor(private router: Router) {}
-
   onSubmit() {
-    this.login.emit({ email: this.usernameOrEmail, password: this.password });
+    this.login.emit({ identifier: this.identifier, password: this.password });
   }
 }

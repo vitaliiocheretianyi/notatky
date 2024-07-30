@@ -68,6 +68,7 @@ public class TextNodeService {
         String noteId = request.getNoteId();
         String textEntryId = request.getTextEntryId();
 
+        System.out.println("\n\nID: " + textEntryId + "; Note ID: " + noteId + "; Text Entry ID: " + textEntryId + "\n\n");
         if (!userNoteRepository.existsByUserIdAndNoteId(userId, noteId)) {
             throw new NoteNotFoundException("User and note do not match");
         }

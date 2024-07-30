@@ -1,6 +1,5 @@
 <div class="auth-container">
   <h2>{{ isLoginMode ? 'Login' : 'Register' }}</h2>
-  
   <app-login *ngIf="isLoginMode" (switchMode)="toggleMode()" (login)="onLogin($event)" [error]="error"></app-login>
   <app-register *ngIf="!isLoginMode" (switchMode)="toggleMode()" (register)="onRegister($event)" [error]="error"></app-register>
 </div>

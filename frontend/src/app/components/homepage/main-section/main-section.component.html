@@ -1,20 +1,14 @@
-<div class="main-section">
-    <div *ngIf="selectedNoteId">{{ noteContent }}</div>
-    <div *ngIf="selectedAction">
-      <form *ngIf="selectedAction === 'change-username'">
-        <input type="text" placeholder="New Username" />
-        <button type="button">Confirm</button>
-      </form>
-      <form *ngIf="selectedAction === 'change-email'">
-        <input type="email" placeholder="New Email" />
-        <button type="button">Confirm</button>
-      </form>
-      <form *ngIf="selectedAction === 'change-password'">
-        <input type="password" placeholder="New Password" />
-        <input type="password" placeholder="Confirm Password" />
-        <button type="button">Confirm</button>
-      </form>
-      <button *ngIf="selectedAction === 'delete-account'" type="button">Confirm Deletion</button>
+<div>
+  <form [formGroup]="noteForm">
+    <input formControlName="title" placeholder="Title" />
+    <div formArrayName="contents">
+      <div *ngFor="let content of contents.controls; let i = index">
+        <textarea 
+          [formControlName]="i"
+          (keydown)="handleKeyDown($event, i)"
+        ></textarea>
+      </div>
     </div>
-  </div>
-  
+  </form>
+  <button (click)="addContentField()">Add Content Field</button>
+</div>

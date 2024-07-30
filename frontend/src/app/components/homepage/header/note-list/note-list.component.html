@@ -1,8 +1,8 @@
-<div class="note-list">
-    <ul>
-      <li *ngFor="let note of notes" (click)="onNoteClick(note.id)">
-        {{ note.title }}
-      </li>
-    </ul>
-  </div>
-  
+<ul>
+  <li *ngFor="let note of notes" class="note-item">
+    <span (click)="onNoteClick(note.id)">
+      {{ note.title }} ({{ getFormattedDate(note.lastInteractedWith) }})
+    </span>
+    <button class="delete-button" (click)="onDeleteClick(note.id)">x</button>
+  </li>
+</ul>

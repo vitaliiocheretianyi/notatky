@@ -16,28 +16,30 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+        System.out.println("Received Register Request: " + request);
         ServiceResponse<String> response = userService.register(request);
         if (!response.isSuccess()) {
-            return ResponseEntity.badRequest().body(response.getMessage());
+            return ResponseEntity.badRequest().body(response);
         }
-        return ResponseEntity.ok(response.getData());
+        return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/login/email")
-    public ResponseEntity<?> loginWithEmail(@RequestBody LoginRequest request) {
-        ServiceResponse<String> response = userService.loginWithEmail(request);
-        if (!response.isSuccess()) {
-            return ResponseEntity.badRequest().body(response.getMessage());
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        System.out.println("Received Login Request: " + request);
+        ServiceResponse<String> response;
+        if (request.getEmail() != null) {
+            response = userService.loginWithEmail(request);
+        } else {
+            response = userService.loginWithUsername(request);
         }
-        return ResponseEntity.ok(response.getData());
-    }
 
-    @PostMapping("/login/username")
-    public ResponseEntity<?> loginWithUsername(@RequestBody LoginRequest request) {
-        ServiceResponse<String> response = userService.loginWithUsername(request);
         if (!response.isSuccess()) {
-            return ResponseEntity.badRequest().body(response.getMessage());
+            System.out.println(response);
+            System.out.println("FAILURE TO LOG IN");
+            return ResponseEntity.badRequest().body(response);
         }
-        return ResponseEntity.ok(response.getData());
+        System.out.println("SUCCESSFULLY LOGGED IN:" + response);
+        return ResponseEntity.ok(response);
     }
 }

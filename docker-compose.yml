@@ -1,7 +1,6 @@
-version: '3.8'
-
 services:
   frontend:
+    container_name: frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
@@ -12,10 +11,9 @@ services:
       - /app/node_modules
     depends_on:
       - backend
-    environment:
-      - BACKEND_URL=http://localhost:8080
 
   backend:
+    container_name: backend
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
@@ -26,6 +24,7 @@ services:
       DATASOURCE_USERNAME: ${DB_USER}
       DATASOURCE_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      SPRING_PROFILES_ACTIVE: docker
     depends_on:
       mysql:
         condition: service_healthy

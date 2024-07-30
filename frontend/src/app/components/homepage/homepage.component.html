@@ -1,5 +1,9 @@
-<div class="homepage">
-    <app-header (noteSelected)="onNoteSelected($event)" (actionSelected)="onActionSelected($event)"></app-header>
-    <app-main-section [selectedNoteId]="selectedNoteId" [selectedAction]="selectedAction"></app-main-section>
+<div class="homepage-container">
+  <div class="note-list-container">
+    <app-note-list [notes]="notes" (noteSelected)="onNoteSelected($event)" (noteDeleted)="onNoteDeleted($event)"></app-note-list>
+    <button (click)="addNote()">Add Note</button> <!-- Add Note button -->
   </div>
-  
+  <div class="main-section-container">
+    <app-main-section [selectedNoteId]="selectedNoteId" [notes]="notes" [noteChildren]="noteChildren" (notesUpdated)="onNotesUpdated()"></app-main-section>
+  </div>
+</div>

@@ -1,1 +1,63 @@
+# Global ignores
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.temp
 .env
+
+# Backend (Spring Boot)
+backend/target/
+backend/*.log
+backend/.classpath
+backend/.project
+backend/.settings/
+backend/.idea/
+backend/*.iml
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+backend/.gradle/
+backend/build/
+backend/out/
+backend/.env
+
+# Eclipse specific
+backend/.metadata
+backend/.recommenders
+
+# STS specific
+backend/.springBeans
+
+# IntelliJ IDEA specific
+backend/.idea/
+backend/*.iws
+backend/*.iml
+backend/*.ipr
+
+# Frontend (TypeScript Angular)
+frontend/node_modules/
+frontend/dist/
+frontend/tmp/
+frontend/out-tsc/
+frontend/.angular/
+frontend/.env
+
+# IDE specific
+frontend/.idea/
+frontend/.vscode/
+frontend/.history/
+
+# TypeScript specific
+frontend/*.tsbuildinfo
+frontend/.npmrc
+frontend/.yarnrc
+
+# System files
+frontend/.DS_Store
+frontend/Thumbs.db
+
+# Logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*

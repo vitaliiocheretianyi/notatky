@@ -1,5 +1,6 @@
 package com.itsvitaliio.backend.filter;
 
+import com.itsvitaliio.backend.utilities.RequestWrapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,19 +13,17 @@ import java.io.IOException;
 @Component
 public class LoggingFilter extends OncePerRequestFilter {
 
+    @SuppressWarnings("null")
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         try {
             if (!isMultipartContent(request)) {
                 // For non-multipart requests, wrap the request for logging
-                //System.out.println("is NOT multipart");
-                // RequestWrapper wrappedRequest = new RequestWrapper(request);
-                // filterChain.doFilter(wrappedRequest, response);
-                filterChain.doFilter(request, response);
+                RequestWrapper wrappedRequest = new RequestWrapper(request);
+                filterChain.doFilter(wrappedRequest, response);
             } else {
                 // For multipart requests, proceed without wrapping
-                //System.out.println("IS MULTIPART");
                 filterChain.doFilter(request, response);
             }
         } catch (Exception e) {

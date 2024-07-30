@@ -1,5 +1,7 @@
 <div class="header">
-    <app-note-list (noteSelected)="onNoteSelected($event)"></app-note-list>
-    <app-settings (actionSelected)="onActionSelected($event)"></app-settings>
+  <div *ngIf="notes.length > 0">
+    <app-note-list (noteSelected)="selectNote($event)" [notes]="notes"></app-note-list>
   </div>
-  
+  <button (click)="addNote()">Add Note</button>
+  <app-settings></app-settings>
+</div>
