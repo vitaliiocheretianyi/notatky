@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -89,30 +90,27 @@ public class ImageNodeService {
     }
 
     @Transactional
-    public void editImageEntry(String userId, EditImageEntryRequest request, MultipartFile file) throws IOException {
-        String noteId = request.getNoteId();
-        String imageEntryId = request.getImageEntryId();
-
-        if (!userNoteRepository.existsByUserIdAndNoteId(userId, noteId)) {
-            throw new NoteNotFoundException("User and note do not match");
+    public void editImageEntry(String userId, EditImageEntryRequest request, MultipartFile file) throws NoteNotFoundException, InvalidEntryException, IOException {
+        Optional<ImageNode> imageNodeOptional = imageNodeRepository.findById(request.getImageEntryId());
+        if (imageNodeOptional.isEmpty()) {
+            throw new NoteNotFoundException("Image entry not found");
         }
 
-        NoteChild noteChild = noteChildRepository.findByNoteIdAndChildId(noteId, imageEntryId)
-                .orElseThrow(() -> new InvalidEntryException("Image entry not found in the note"));
-
-        ImageNode imageNode = imageNodeRepository.findById(imageEntryId)
-                .orElseThrow(() -> new InvalidEntryException("Image entry not found"));
-
-        if (!noteChild.getPosition().equals(request.getPosition()) && isPositionDuplicate(noteId, request.getPosition())) {
-            throw new InvalidEntryException("Position " + request.getPosition() + " is already taken for note " + noteId);
+        ImageNode imageNode = imageNodeOptional.get();
+        if (!noteChildRepository.existsByNoteIdAndChildId(request.getNoteId(), request.getImageEntryId())) {
+            throw new InvalidEntryException("Image entry does not belong to the specified note");
         }
 
-        String imagePath = saveImage(file);
-        imageNode.setImagePath(imagePath);
+        // Assuming the file is saved to a path and the path is updated in the imagePath field
+        String newImagePath = saveFileAndGetPath(file);  // Implement this method to handle file saving
+        imageNode.setImagePath(newImagePath);
         imageNodeRepository.save(imageNode);
+    }
 
-        noteChild.setPosition(request.getPosition());
-        noteChildRepository.save(noteChild);
+    private String saveFileAndGetPath(MultipartFile file) throws IOException {
+        // Implement the logic to save the file and return its path
+        // This is a placeholder implementation
+        return "/path/to/image/" + file.getOriginalFilename();
     }
 
     @Transactional

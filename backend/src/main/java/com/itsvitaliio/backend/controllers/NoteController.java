@@ -60,23 +60,20 @@ public class NoteController {
             Note createdNote = noteService.createNoteWithUserAssociation(userId, noteRequest);
             return ResponseEntity.ok(createdNote);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Internal Server Exrror");
+            return ResponseEntity.status(500).body("Internal Server Error");
         }
     }
 
     @GetMapping("/notes")
     public ResponseEntity<?> getAllNotes(HttpServletRequest request) {
-        System.out.println("Processed the request");
         String userId = getUserIdFromToken(request);
         if (userId == null) {
             return ResponseEntity.status(401).body("Unauthorized");
         }
         try {
             List<Note> notes = noteService.getAllNotesForUser(userId);
-            System.out.println("Found " + notes.size() + " for user " + userId);
             return ResponseEntity.ok().body(notes);
         } catch (Exception e) {
-            System.out.println("ERROR!!!!\n" + e.getMessage());
             return ResponseEntity.status(500).body("Internal Server Error");
         }
     }
@@ -124,7 +121,6 @@ public class NoteController {
             textNodeService.editTextEntry(userId, textEntryRequest);
             return ResponseEntity.ok("Edited Text Entry Successfully");
         } catch (NoteNotFoundException | InvalidEntryException e) {
-            System.out.println(e.getMessage());
             return ResponseEntity.status(400).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Internal Server Error");
@@ -164,7 +160,7 @@ public class NoteController {
         } catch (NoteNotFoundException | InvalidEntryException e) {
             return ResponseEntity.status(400).body(e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(e.getMessage());
+            return ResponseEntity.status(500).body("Internal Server Error");
         }
     }
 

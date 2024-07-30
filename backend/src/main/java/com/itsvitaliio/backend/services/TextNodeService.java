@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -64,30 +65,19 @@ public class TextNodeService {
     }
 
     @Transactional
-    public void editTextEntry(String userId, EditTextEntryRequest request) {
-        String noteId = request.getNoteId();
-        String textEntryId = request.getTextEntryId();
-
-        System.out.println("\n\nID: " + textEntryId + "; Note ID: " + noteId + "; Text Entry ID: " + textEntryId + "\n\n");
-        if (!userNoteRepository.existsByUserIdAndNoteId(userId, noteId)) {
-            throw new NoteNotFoundException("User and note do not match");
+    public void editTextEntry(String userId, EditTextEntryRequest request) throws NoteNotFoundException, InvalidEntryException {
+        Optional<TextNode> textNodeOptional = textNodeRepository.findById(request.getTextEntryId());
+        if (textNodeOptional.isEmpty()) {
+            throw new NoteNotFoundException("Text entry not found");
         }
 
-        NoteChild noteChild = noteChildRepository.findByNoteIdAndChildId(noteId, textEntryId)
-                .orElseThrow(() -> new InvalidEntryException("Text entry not found in the note"));
-
-        TextNode textNode = textNodeRepository.findById(textEntryId)
-                .orElseThrow(() -> new InvalidEntryException("Text entry not found"));
-
-        if (!noteChild.getPosition().equals(request.getPosition()) && isPositionDuplicate(noteId, request.getPosition())) {
-            throw new InvalidEntryException("Position " + request.getPosition() + " is already taken for note " + noteId);
+        TextNode textNode = textNodeOptional.get();
+        if (!noteChildRepository.existsByNoteIdAndChildId(request.getNoteId(), request.getTextEntryId())) {
+            throw new InvalidEntryException("Text entry does not belong to the specified note");
         }
 
         textNode.setContent(request.getNewText());
         textNodeRepository.save(textNode);
-
-        noteChild.setPosition(request.getPosition());
-        noteChildRepository.save(noteChild);
     }
 
     @Transactional

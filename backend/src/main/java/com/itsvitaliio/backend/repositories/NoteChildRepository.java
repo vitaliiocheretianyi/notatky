@@ -10,6 +10,7 @@ import java.util.Optional;
 @Repository
 public interface NoteChildRepository extends JpaRepository<NoteChild, String> {
     Optional<NoteChild> findByNoteIdAndChildId(String noteId, String childId);
+    boolean existsByNoteIdAndChildId(String noteId, String childId);  // Add this method
     boolean existsByNoteIdAndPosition(String noteId, int position);
     List<NoteChild> findByNoteId(String noteId);
     List<NoteChild> findByNoteIdIn(List<String> noteIds);
