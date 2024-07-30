@@ -42,6 +42,7 @@ export class HeaderComponent {
         this.homepageComponent.loadNotes(); // Call loadNotes method to fetch and render the updated notes list
         if (createdNote.id) {
           this.homepageComponent.loadNoteChildren(createdNote.id); // Load the children of the newly created note
+          this.homepageComponent.onNoteSelected(createdNote.id); // Select the newly created note
         }
       },
       (error: any) => {
@@ -54,4 +55,3 @@ export class HeaderComponent {
     this.noteSelected.emit(noteId);
   }
 }
-
