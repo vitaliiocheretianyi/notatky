@@ -96,7 +96,7 @@ export class NoteService {
     );
   }
 
-  deleteTextEntry(noteId: string, textEntryId: number): Observable<any> {
+  deleteTextEntry(noteId: string, textEntryId: string): Observable<any> {
     const url = `${this.apiUrl}/text/delete`;
     const headers = this.getHeaders();
     return from(axios.delete(url, { headers, data: { noteId, textEntryId } })).pipe(

@@ -41,3 +41,21 @@ form {
 input {
   margin: 10px 0;
 }
+
+.content-item {
+  display: flex;
+  align-items: center;
+}
+
+.content-item textarea {
+  flex: 1;
+}
+
+.content-item button {
+  margin-left: 10px;
+  background-color: red;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}

@@ -16,7 +16,7 @@ import { Note, NoteChild } from '../../../models/note.model';
 export class MainSectionComponent implements OnInit, OnChanges {
   @Input() selectedNoteId: string | null = null;
   @Input() notes: Note[] = [];
-  @Input() noteChildren: NoteChild[] = [];
+  @Input() noteChildren: NoteChild[] = []; // Declare as Input property
   @Output() notesUpdated = new EventEmitter<void>();
 
   noteForm!: FormGroup;
@@ -50,24 +50,36 @@ export class MainSectionComponent implements OnInit, OnChanges {
   }
 
   loadNote() {
+    if (!this.selectedNoteId) return;
+
     this.initialLoad = true;
     const note = this.notes.find(n => n.id === this.selectedNoteId);
     if (note) {
       this.noteForm.setControl('title', this.fb.control(note.title));
       this.originalTitle = note.title;
-      this.loadNoteChildren(note.contents);
-      setTimeout(() => {
-        this.initialLoad = false;
-      }, 0);
+
+      this.noteService.getNoteChildren(this.selectedNoteId).subscribe({
+        next: (response: any) => {
+          console.log('Note children received:', response.data); // Log note children
+          this.loadNoteChildren(response.data);
+          setTimeout(() => {
+            this.initialLoad = false;
+          }, 0);
+        },
+        error: (error) => {
+          console.error('Error loading note children:', error);
+        }
+      });
     }
   }
 
   loadNoteChildren(children: NoteChild[] = []) {
+    console.log('Number of note children:', children.length); // Log the number of note children
     const contentsArray = this.fb.array([]);
     this.metadata = [];
     this.originalContent = [];
     const sortedChildren = [...children].sort((a, b) => a.position - b.position);
-    sortedChildren.forEach(child => {
+    sortedChildren.forEach((child, index) => {
       if (child.type === 'text' && child.textNode) {
         const control = this.fb.control(child.textNode.content);
         contentsArray.push(control);
@@ -112,20 +124,50 @@ export class MainSectionComponent implements OnInit, OnChanges {
     return this.noteForm.get('contents') as FormArray;
   }
 
-  addContentField() {
-    this.contents.push(this.fb.control(''));
-    this.metadata.push({ childId: null });
-    this.originalContent.push('');
+  handleKeyDown(event: KeyboardEvent, contentIndex: number) {
+    const contentControl = this.contents.at(contentIndex) as FormControl;
+    if (event.shiftKey && event.key === 'Enter') {
+      event.preventDefault();
+      this.addContentField(contentIndex + 1);
+    } else if (
+      (event.key === 'Backspace' || event.key === 'Delete') &&
+      contentControl.value.trim() === ''
+    ) {
+      event.preventDefault();
+      this.deleteContentField(contentIndex);
+    }
+  }
+
+  addContentField(position: number) {
+    const control = this.fb.control('');
+    this.contents.insert(position, control);
+    this.metadata.splice(position, 0, { childId: null });
+    this.originalContent.splice(position, 0, '');
+    this.notesUpdated.emit();
+    this.setFormValueChanges(); // Ensure value changes are detected for the new control
 
     setTimeout(() => {
-      this.noteContentElements.last.nativeElement.focus();
+      this.noteContentElements.toArray()[position].nativeElement.focus();
     }, 0);
   }
 
-  handleKeyDown(event: KeyboardEvent, contentIndex: number) {
-    if (event.shiftKey && event.key === 'Enter') {
-      event.preventDefault();
-      this.addContentField();
+  deleteContentField(contentIndex: number) {
+    const noteId = this.selectedNoteId;
+    const textEntryId = this.metadata[contentIndex].childId;
+
+    if (noteId && textEntryId) {
+      this.noteService.deleteTextEntry(noteId, textEntryId).subscribe(() => {
+        this.contents.removeAt(contentIndex);
+        this.metadata.splice(contentIndex, 1);
+        this.originalContent.splice(contentIndex, 1);
+        this.notesUpdated.emit();
+      }, error => {
+        console.error('Error deleting text entry:', error);
+      });
+    } else {
+      this.contents.removeAt(contentIndex);
+      this.metadata.splice(contentIndex, 1);
+      this.originalContent.splice(contentIndex, 1);
     }
   }
 
@@ -138,9 +180,50 @@ export class MainSectionComponent implements OnInit, OnChanges {
 
   handleTextChange(contentIndex: number) {
     const contentControl = this.contents.at(contentIndex) as FormControl;
-    if (contentControl.value.trim() !== this.originalContent[contentIndex]) {
-      console.log(`Saving text entry at index ${contentIndex}:`, contentControl.value);
-      this.saveTextEntry(contentIndex);
+    const newText = contentControl.value.trim();
+    if (newText !== this.originalContent[contentIndex]) {
+      console.log(`Content changed at index ${contentIndex}:`, newText);
+      if (!this.metadata[contentIndex].childId) {
+        this.createTextEntry(contentIndex);
+      } else {
+        this.saveTextEntry(contentIndex);
+      }
+    }
+  }
+
+  createTextEntry(contentIndex: number) {
+    const contentControl = this.contents.at(contentIndex) as FormControl;
+    const noteId = this.selectedNoteId;
+    const newText = contentControl.value.trim();
+
+    if (noteId && newText !== '') {
+      this.noteService.createTextEntry(noteId, newText, contentIndex).subscribe((response: any) => {
+        this.metadata[contentIndex].childId = response.id;
+        this.notesUpdated.emit();
+        this.originalContent[contentIndex] = newText; // Update the original content after successful save
+        console.log(`Text entry created at index ${contentIndex} with ID ${response.id}`);
+      }, error => {
+        console.error('Error creating text entry:', error);
+      });
+    }
+  }
+
+  saveTextEntry(contentIndex: number) {
+    const contentControl = this.contents.at(contentIndex) as FormControl;
+    const noteId = this.selectedNoteId;
+    const textEntryId = this.metadata[contentIndex].childId;
+    const newText = contentControl.value.trim();
+
+    console.log(`Attempting to save text entry at index ${contentIndex}:`, { noteId, textEntryId, newText });
+
+    if (noteId && textEntryId) {
+      this.noteService.editTextEntry(noteId, textEntryId, newText, contentIndex).subscribe(() => {
+        this.notesUpdated.emit();
+        this.originalContent[contentIndex] = newText; // Update the original content after successful save
+        console.log(`Text entry at index ${contentIndex} saved successfully`);
+      }, error => {
+        console.error('Error editing text entry:', error);
+      });
     }
   }
 
@@ -153,30 +236,6 @@ export class MainSectionComponent implements OnInit, OnChanges {
     }, error => {
       console.error('Error editing note title:', error);
     });
-  }
-
-  saveTextEntry(contentIndex: number) {
-    const contentControl = this.contents.at(contentIndex) as FormControl;
-    const noteId = this.selectedNoteId;
-    const textEntryId = this.metadata[contentIndex].childId;
-    const newText = contentControl.value;
-
-    if (noteId && textEntryId) {
-      this.noteService.editTextEntry(noteId, textEntryId, newText, contentIndex).subscribe(() => {
-        this.notesUpdated.emit();
-        this.originalContent[contentIndex] = newText; // Update the original content after successful save
-      }, error => {
-        console.error('Error editing text entry:', error);
-      });
-    } else if (noteId) {
-      this.noteService.createTextEntry(noteId, newText, contentIndex).subscribe((response: any) => {
-        this.metadata[contentIndex].childId = response.id;
-        this.notesUpdated.emit();
-        this.originalContent[contentIndex] = newText; // Update the original content after successful save
-      }, error => {
-        console.error('Error creating text entry:', error);
-      });
-    }
   }
 
   logNotes() {
@@ -211,7 +270,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
         if (content.id && content.textNode && content.textNode.content !== this.originalContent[index]) {
           this.saveTextEntry(index);
         } else if (!content.id && content.textNode && content.textNode.content.trim() !== '') {
-          this.saveTextEntry(index);
+          this.createTextEntry(index);
         }
       });
     }

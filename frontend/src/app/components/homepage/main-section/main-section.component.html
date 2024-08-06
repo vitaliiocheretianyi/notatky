@@ -2,13 +2,13 @@
   <form [formGroup]="noteForm">
     <input formControlName="title" placeholder="Title" />
     <div formArrayName="contents">
-      <div *ngFor="let content of contents.controls; let i = index">
+      <div *ngFor="let content of contents.controls; let i = index" class="content-item">
         <textarea 
           [formControlName]="i"
           (keydown)="handleKeyDown($event, i)"
         ></textarea>
+        <button type="button" (click)="deleteContentField(i)">x</button>
       </div>
     </div>
   </form>
-  <button (click)="addContentField()">Add Content Field</button>
 </div>

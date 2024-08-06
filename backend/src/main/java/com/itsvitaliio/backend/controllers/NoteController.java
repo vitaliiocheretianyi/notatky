@@ -113,6 +113,7 @@ public class NoteController {
     @PutMapping("/text/edit")
     public ResponseEntity<?> editTextNode(HttpServletRequest request, @RequestBody EditTextEntryRequest textEntryRequest) {
         String userId = getUserIdFromToken(request);
+        System.out.println("Editing note entry " + textEntryRequest.getTextEntryId() + " of Note " + textEntryRequest.getNoteId());
         if (userId == null) {
             return ResponseEntity.status(401).body("Unauthorized");
         }
