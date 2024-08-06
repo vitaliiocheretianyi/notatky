@@ -4,11 +4,12 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, FormControl } f
 import { debounceTime } from 'rxjs/operators';
 import { NoteService } from '../../../services/note.service';
 import { Note, NoteChild } from '../../../models/note.model';
+import { DropdownComponent } from '../dropdown/dropdown.component';
 
 @Component({
   selector: 'app-main-section',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, DropdownComponent],
   templateUrl: './main-section.component.html',
   styleUrls: ['./main-section.component.css'],
   providers: [NoteService]
@@ -24,6 +25,9 @@ export class MainSectionComponent implements OnInit, OnChanges {
   originalContent: string[] = [];
   originalTitle: string = '';
   initialLoad: boolean = true;
+  showDropdown: boolean = false;
+  highlightedIndex: number = 0;
+  dropdownOptions: string[] = ['/image'];
   @ViewChildren('noteContent') noteContentElements!: QueryList<ElementRef>;
 
   constructor(private fb: FormBuilder, private noteService: NoteService) {}
@@ -66,7 +70,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
             this.initialLoad = false;
           }, 0);
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('Error loading note children:', error);
         }
       });
@@ -135,6 +139,20 @@ export class MainSectionComponent implements OnInit, OnChanges {
     ) {
       event.preventDefault();
       this.deleteContentField(contentIndex);
+    } else if (contentControl.value === '' && event.key === '/') {
+      this.showDropdown = true;
+      this.highlightedIndex = 0;
+    } else if (this.showDropdown) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        this.selectDropdownOption(this.dropdownOptions[this.highlightedIndex], contentIndex);
+      } else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        this.highlightedIndex = (this.highlightedIndex + 1) % this.dropdownOptions.length;
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        this.highlightedIndex = (this.highlightedIndex - 1 + this.dropdownOptions.length) % this.dropdownOptions.length;
+      }
     }
   }
 
@@ -161,7 +179,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
         this.metadata.splice(contentIndex, 1);
         this.originalContent.splice(contentIndex, 1);
         this.notesUpdated.emit();
-      }, error => {
+      }, (error: any) => {
         console.error('Error deleting text entry:', error);
       });
     } else {
@@ -202,7 +220,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
         this.notesUpdated.emit();
         this.originalContent[contentIndex] = newText; // Update the original content after successful save
         console.log(`Text entry created at index ${contentIndex} with ID ${response.id}`);
-      }, error => {
+      }, (error: any) => {
         console.error('Error creating text entry:', error);
       });
     }
@@ -221,7 +239,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
         this.notesUpdated.emit();
         this.originalContent[contentIndex] = newText; // Update the original content after successful save
         console.log(`Text entry at index ${contentIndex} saved successfully`);
-      }, error => {
+      }, (error: any) => {
         console.error('Error editing text entry:', error);
       });
     }
@@ -233,7 +251,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
     this.noteService.editNoteTitle(this.selectedNoteId, this.noteForm.value.title).subscribe(() => {
       this.notesUpdated.emit();
       this.originalTitle = this.noteForm.value.title; // Update the original title after successful save
-    }, error => {
+    }, (error: any) => {
       console.error('Error editing note title:', error);
     });
   }
@@ -272,6 +290,44 @@ export class MainSectionComponent implements OnInit, OnChanges {
         } else if (!content.id && content.textNode && content.textNode.content.trim() !== '') {
           this.createTextEntry(index);
         }
+      });
+    }
+  }
+
+  selectDropdownOption(option: string, contentIndex: number) {
+    if (option === '/image') {
+      // Handle image upload here
+      console.log('Selected /image option');
+      this.showImageUpload(contentIndex);
+    }
+    this.showDropdown = false;
+  }
+
+  showImageUpload(contentIndex: number) {
+    // Implement your image upload logic here
+    // You can use a file input element and trigger click programmatically
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (event: any) => {
+      const file = event.target.files[0];
+      if (file) {
+        // Handle file upload
+        this.uploadImage(file, contentIndex);
+      }
+    };
+    input.click();
+  }
+
+  uploadImage(file: File, contentIndex: number) {
+    const noteId = this.selectedNoteId;
+    if (noteId) {
+      this.noteService.uploadImage(noteId, file, contentIndex).subscribe((response: any) => {
+        // Handle response and update the note content with the image node
+        console.log('Image uploaded successfully:', response);
+        // Add logic to update the note content with the new image node
+      }, (error: any) => {
+        console.error('Error uploading image:', error);
       });
     }
   }

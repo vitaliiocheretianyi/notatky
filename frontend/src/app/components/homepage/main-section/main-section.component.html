@@ -6,8 +6,16 @@
         <textarea 
           [formControlName]="i"
           (keydown)="handleKeyDown($event, i)"
+          #noteContent
         ></textarea>
         <button type="button" (click)="deleteContentField(i)">x</button>
+        <app-dropdown
+          *ngIf="showDropdown && noteContent === noteContentElements.toArray()[i].nativeElement"
+          [options]="dropdownOptions"
+          [show]="showDropdown"
+          [highlightedIndex]="highlightedIndex"
+          (optionSelected)="selectDropdownOption($event, i)"
+        ></app-dropdown>
       </div>
     </div>
   </form>

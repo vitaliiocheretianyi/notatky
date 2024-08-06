@@ -1,8 +1,10 @@
 package com.itsvitaliio.backend.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.itsvitaliio.backend.dto.AddImageEntryRequest;
-import com.itsvitaliio.backend.dto.EditImageEntryRequest;
 import com.itsvitaliio.backend.dto.DeleteImageEntryRequest;
+import com.itsvitaliio.backend.dto.EditImageEntryRequest;
+import com.itsvitaliio.backend.dto.NoteChildDto;
 import com.itsvitaliio.backend.exceptions.InvalidEntryException;
 import com.itsvitaliio.backend.exceptions.NoteNotFoundException;
 import com.itsvitaliio.backend.models.ImageNode;
@@ -11,14 +13,11 @@ import com.itsvitaliio.backend.repositories.ImageNodeRepository;
 import com.itsvitaliio.backend.repositories.NoteChildRepository;
 import com.itsvitaliio.backend.repositories.NoteRepository;
 import com.itsvitaliio.backend.repositories.UserNoteRepository;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,7 +29,6 @@ import java.util.logging.Logger;
 @Service
 public class ImageNodeService {
 
-    public static String UPLOAD_DIRECTORY = System.getProperty("user.dir") + "/images";
     private static final Logger logger = Logger.getLogger(ImageNodeService.class.getName());
 
     @Value("${image.upload.dir}")
@@ -41,7 +39,6 @@ public class ImageNodeService {
     private final NoteChildRepository noteChildRepository;
     private final UserNoteRepository userNoteRepository;
 
-    @Autowired
     public ImageNodeService(NoteRepository noteRepository, ImageNodeRepository imageNodeRepository,
                             NoteChildRepository noteChildRepository, UserNoteRepository userNoteRepository) {
         this.noteRepository = noteRepository;
@@ -54,16 +51,26 @@ public class ImageNodeService {
         return noteChildRepository.existsByNoteIdAndPosition(noteId, position);
     }
 
-    private String saveImage(MultipartFile file) throws IOException {
-        StringBuilder fileNames = new StringBuilder();
-        Path fileNameAndPath = Paths.get(imageUploadDir, file.getOriginalFilename());
-        fileNames.append(file.getOriginalFilename());
+    private String generateRandomString() {
+        return UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private String saveFileAndGetPath(MultipartFile file) throws IOException {
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null) {
+            throw new IOException("File must have an original filename");
+        }
+
+        String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        String randomFileName = generateRandomString() + fileExtension;
+        Path fileNameAndPath = Paths.get(imageUploadDir, randomFileName);
         Files.write(fileNameAndPath, file.getBytes());
-        return "Saved";
+
+        return randomFileName;
     }
 
     @Transactional
-    public void addImageEntry(String userId, AddImageEntryRequest request, MultipartFile file) throws IOException {
+    public NoteChildDto addImageEntry(String userId, AddImageEntryRequest request, MultipartFile file) throws IOException {
         String noteId = request.getNoteId();
         if (!userNoteRepository.existsByUserIdAndNoteId(userId, noteId)) {
             throw new NoteNotFoundException("User and note do not match");
@@ -73,11 +80,11 @@ public class ImageNodeService {
             throw new InvalidEntryException("Position " + request.getPosition() + " is already taken for note " + noteId);
         }
 
-        String imagePath = saveImage(file);
+        String imagePath = saveFileAndGetPath(file);
 
         ImageNode imageNode = new ImageNode();
         imageNode.setId(UUID.randomUUID().toString());
-        imageNode.setImagePath(imagePath);
+        imageNode.setImagePath(imagePath);  // Set the new image path here
         imageNodeRepository.save(imageNode);
 
         NoteChild noteChild = new NoteChild();
@@ -87,6 +94,14 @@ public class ImageNodeService {
         noteChild.setChildId(imageNode.getId());
         noteChild.setPosition(request.getPosition());
         noteChildRepository.save(noteChild);
+
+        NoteChildDto dto = new NoteChildDto();
+        dto.setId(noteChild.getId());
+        dto.setType(noteChild.getType());
+        dto.setImageNode(imageNode);
+        dto.setPosition(noteChild.getPosition());  // Set position
+
+        return dto;
     }
 
     @Transactional
@@ -101,16 +116,9 @@ public class ImageNodeService {
             throw new InvalidEntryException("Image entry does not belong to the specified note");
         }
 
-        // Assuming the file is saved to a path and the path is updated in the imagePath field
-        String newImagePath = saveFileAndGetPath(file);  // Implement this method to handle file saving
+        String newImagePath = saveFileAndGetPath(file);  // Save the file and get the new path
         imageNode.setImagePath(newImagePath);
         imageNodeRepository.save(imageNode);
-    }
-
-    private String saveFileAndGetPath(MultipartFile file) throws IOException {
-        // Implement the logic to save the file and return its path
-        // This is a placeholder implementation
-        return "/path/to/image/" + file.getOriginalFilename();
     }
 
     @Transactional

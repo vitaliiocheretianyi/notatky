@@ -1,6 +1,9 @@
 package com.itsvitaliio.backend.controllers;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +21,9 @@ import com.itsvitaliio.backend.services.NoteService;
 import com.itsvitaliio.backend.services.TextNodeService;
 import com.itsvitaliio.backend.utilities.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
@@ -30,6 +36,9 @@ public class NoteController {
     private final ImageNodeService imageNodeService;
     private final NoteChildService noteChildService;
     private final ObjectMapper objectMapper;
+
+    @Value("${image.upload.dir}")
+    private String imageUploadDir;
 
     public NoteController(JwtUtil jwtUtil, NoteService noteService, TextNodeService textNodeService, ImageNodeService imageNodeService, NoteChildService noteChildService, ObjectMapper objectMapper) {
         this.jwtUtil = jwtUtil;
@@ -162,6 +171,24 @@ public class NoteController {
             return ResponseEntity.status(400).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Internal Server Error");
+        }
+    }
+
+    @GetMapping("/{filename}")
+    public ResponseEntity<Resource> serveImage(@PathVariable String filename) {
+        try {
+            Path filePath = Paths.get(imageUploadDir).resolve(filename).normalize();
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists() && resource.isReadable()) {
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                        .body(resource);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 

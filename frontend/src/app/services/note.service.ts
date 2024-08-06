@@ -7,7 +7,7 @@ import { catchError } from 'rxjs/operators';
   providedIn: 'root'
 })
 export class NoteService {
-  private apiUrl = 'http://localhost:8080/notatky';
+  private apiUrl = 'http://localhost:8080/notatky'; // Replace with your API URL
 
   constructor() {}
 
@@ -28,6 +28,7 @@ export class NoteService {
 
   private handleTokenExpiration(error: any): Observable<never> {
     if (error.response && error.response.status === 401) {
+      // Handle token expiration (e.g., redirect to login, refresh token)
       console.error('Token expired or unauthorized');
     }
     return throwError(error);
@@ -36,7 +37,7 @@ export class NoteService {
   createNote(title: string): Observable<any> {
     const url = `${this.apiUrl}/create`;
     const headers = this.getHeaders();
-    const lastInteractedWith = new Date().toISOString();
+    const lastInteractedWith = new Date().toISOString(); // Include the lastInteractedWith property
     return from(axios.post(url, { title, lastInteractedWith }, { headers })).pipe(
       catchError(error => this.handleTokenExpiration(error)),
       catchError(error => this.handleError(error))
@@ -64,7 +65,7 @@ export class NoteService {
   editNoteTitle(noteId: string, title: string): Observable<any> {
     const url = `${this.apiUrl}/edit`;
     const headers = this.getHeaders();
-    const lastInteractedWith = new Date().toISOString();
+    const lastInteractedWith = new Date().toISOString(); // Include the lastInteractedWith property
     return from(axios.put(url, { noteId, title, lastInteractedWith }, { headers })).pipe(
       catchError(error => this.handleTokenExpiration(error)),
       catchError(error => this.handleError(error))
@@ -96,7 +97,7 @@ export class NoteService {
     );
   }
 
-  deleteTextEntry(noteId: string, textEntryId: string): Observable<any> {
+  deleteTextEntry(noteId: string, textEntryId: string): Observable<any> { // Ensure textEntryId is of type string
     const url = `${this.apiUrl}/text/delete`;
     const headers = this.getHeaders();
     return from(axios.delete(url, { headers, data: { noteId, textEntryId } })).pipe(
@@ -105,9 +106,21 @@ export class NoteService {
     );
   }
 
+  uploadImage(noteId: string, file: File, position: number): Observable<any> {
+    const url = `${this.apiUrl}/image/upload`;
+    const headers = this.getHeaders();
+    const formData = new FormData();
+    formData.append('noteId', noteId);
+    formData.append('file', file);
+    formData.append('position', position.toString());
+    return from(axios.post(url, formData, { headers: { ...headers, 'Content-Type': 'multipart/form-data' } })).pipe(
+      catchError(error => this.handleError(error))
+    );
+  }
+
   private handleError(error: any): Observable<never> {
     let errorMessage: string = error.response?.data?.message || error.message || 'An unknown error occurred!';
-    console.error('Error:', errorMessage);
+    console.error(errorMessage);
     return throwError(errorMessage);
   }
 }

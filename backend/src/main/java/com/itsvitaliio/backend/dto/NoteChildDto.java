@@ -12,4 +12,5 @@ public class NoteChildDto {
     private String type;
     private TextNode textNode;
     private ImageNode imageNode;
+    private Integer position;
 }
