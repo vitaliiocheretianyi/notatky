@@ -5,7 +5,7 @@ export interface TextNode {
   
   export interface ImageNode {
     id: string;
-    url: string;
+    imagePath: string;
   }
   
   export interface NoteChild {

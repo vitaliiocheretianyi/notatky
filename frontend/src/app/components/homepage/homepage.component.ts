@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HeaderComponent } from './header/header.component';
 import { MainSectionComponent } from './main-section/main-section.component';
@@ -14,7 +14,7 @@ import { Note, NoteChild } from '../../models/note.model';
   styleUrls: ['./homepage.component.css'],
   providers: [NoteService]
 })
-export class HomepageComponent implements OnInit {
+export class HomepageComponent implements OnInit, AfterViewInit {
   @ViewChild(HeaderComponent) headerComponent!: HeaderComponent; // Reference to HeaderComponent
   @ViewChild(MainSectionComponent) mainSectionComponent!: MainSectionComponent; // Reference to MainSectionComponent
   selectedNoteId: string | null = null;
@@ -28,7 +28,11 @@ export class HomepageComponent implements OnInit {
   }
 
   ngAfterViewInit() {
-    this.headerComponent.homepageComponent = this; // Assign HomepageComponent instance to HeaderComponent
+    if (this.headerComponent) {
+      this.headerComponent.homepageComponent = this;
+    } else {
+      console.error('HeaderComponent is not initialized');
+    }
   }
 
   loadNotes() {
@@ -57,7 +61,11 @@ export class HomepageComponent implements OnInit {
     this.selectedNoteId = noteId;
     this.loadNoteChildren(noteId);
     setTimeout(() => {
-      this.mainSectionComponent.loadNote(); // Ensure the selected note is loaded in the main section
+      if (this.mainSectionComponent) {
+        this.mainSectionComponent.loadNote(); // Ensure the selected note is loaded in the main section
+      } else {
+        console.error('MainSectionComponent is not initialized');
+      }
     }, 0);
   }
 

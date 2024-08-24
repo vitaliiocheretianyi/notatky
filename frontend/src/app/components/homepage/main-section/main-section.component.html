@@ -6,8 +6,19 @@
         <textarea 
           [formControlName]="i"
           (keydown)="handleKeyDown($event, i)"
+          (input)="handleInput($event, i)"  
           #noteContent
         ></textarea>
+        <div *ngIf="dropdownVisible[i]" class="dropdown">
+          <div 
+            class="dropdown-item" 
+            *ngFor="let option of filteredOptions; let idx = index" 
+            [class.highlighted]="idx === highlightedIndex" 
+            (click)="handleOptionClick(i, option)"
+          >
+            {{ option }}
+          </div>
+        </div>
         <button type="button" (click)="deleteContentField(i)">x</button>
       </div>
     </div>

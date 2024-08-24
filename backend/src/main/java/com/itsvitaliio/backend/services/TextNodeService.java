@@ -25,14 +25,17 @@ public class TextNodeService {
     private final TextNodeRepository textNodeRepository;
     private final NoteChildRepository noteChildRepository;
     private final UserNoteRepository userNoteRepository;
+    private final NoteChildService noteChildService;
 
     @Autowired
     public TextNodeService(NoteRepository noteRepository, TextNodeRepository textNodeRepository,
-                           NoteChildRepository noteChildRepository, UserNoteRepository userNoteRepository) {
+                           NoteChildRepository noteChildRepository, UserNoteRepository userNoteRepository,
+                           NoteChildService noteChildService) {
         this.noteRepository = noteRepository;
         this.textNodeRepository = textNodeRepository;
         this.noteChildRepository = noteChildRepository;
         this.userNoteRepository = userNoteRepository;
+        this.noteChildService = noteChildService;
     }
 
     private boolean isPositionDuplicate(String noteId, int position) {
@@ -47,7 +50,8 @@ public class TextNodeService {
         }
 
         if (isPositionDuplicate(noteId, request.getPosition())) {
-            throw new InvalidEntryException("Position " + request.getPosition() + " is already taken for note " + noteId);
+            // If the position is already taken, shift other entries upward
+            noteChildService.shiftPositionsUpward(noteId, request.getPosition());
         }
 
         TextNode textNode = new TextNode();
@@ -57,22 +61,24 @@ public class TextNodeService {
 
         NoteChild noteChild = new NoteChild();
         noteChild.setId(UUID.randomUUID().toString());
-        noteChild.setNote(noteRepository.findById(noteId).orElseThrow(() -> new NoteNotFoundException("Note not found")));
+        noteChild.setNoteId(noteId);  // Set the noteId directly
         noteChild.setType("text");
-        noteChild.setChildId(textNode.getId());
+        noteChild.setChildId(textNode.getId());  // Use the TextNode ID here
         noteChild.setPosition(request.getPosition());
         noteChildRepository.save(noteChild);
     }
 
     @Transactional
     public void editTextEntry(String userId, EditTextEntryRequest request) throws NoteNotFoundException, InvalidEntryException {
-        Optional<TextNode> textNodeOptional = textNodeRepository.findById(request.getTextEntryId());
-        if (textNodeOptional.isEmpty()) {
-            throw new NoteNotFoundException("Text entry not found");
-        }
+        NoteChild noteChild = noteChildRepository.findById(request.getTextEntryId())
+                .orElseThrow(() -> new InvalidEntryException("Note child not found"));
 
-        TextNode textNode = textNodeOptional.get();
-        if (!noteChildRepository.existsByNoteIdAndChildId(request.getNoteId(), request.getTextEntryId())) {
+        String textNodeId = noteChild.getChildId();
+
+        TextNode textNode = textNodeRepository.findById(textNodeId)
+                .orElseThrow(() -> new NoteNotFoundException("Text entry not found"));
+
+        if (!noteChildRepository.existsByNoteIdAndChildId(request.getNoteId(), textNodeId)) {
             throw new InvalidEntryException("Text entry does not belong to the specified note");
         }
 
@@ -89,10 +95,13 @@ public class TextNodeService {
             throw new NoteNotFoundException("User and note do not match");
         }
 
-        NoteChild noteChild = noteChildRepository.findByNoteIdAndChildId(noteId, textEntryId)
-                .orElseThrow(() -> new InvalidEntryException("Text entry not found in the note"));
+        NoteChild noteChild = noteChildRepository.findById(textEntryId)
+                .orElseThrow(() -> new InvalidEntryException("Note child not found"));
 
-        textNodeRepository.deleteById(textEntryId);
-        noteChildRepository.delete(noteChild);
+        String textNodeId = noteChild.getChildId();
+
+        noteChildService.deleteNoteChild(noteId, textEntryId);
+
+        textNodeRepository.deleteById(textNodeId);
     }
 }

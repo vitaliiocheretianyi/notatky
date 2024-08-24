@@ -8,13 +8,17 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.itsvitaliio.backend.dto.*;
 import com.itsvitaliio.backend.exceptions.InvalidEntryException;
 import com.itsvitaliio.backend.exceptions.NoteNotFoundException;
+import com.itsvitaliio.backend.models.ImageNode;
 import com.itsvitaliio.backend.models.Note;
 import com.itsvitaliio.backend.models.NoteChild;
+import com.itsvitaliio.backend.models.TextNode;
+import com.itsvitaliio.backend.repositories.ImageNodeRepository;
+import com.itsvitaliio.backend.repositories.NoteChildRepository;
+import com.itsvitaliio.backend.repositories.TextNodeRepository;
 import com.itsvitaliio.backend.services.ImageNodeService;
 import com.itsvitaliio.backend.services.NoteChildService;
 import com.itsvitaliio.backend.services.NoteService;
@@ -35,18 +39,24 @@ public class NoteController {
     private final TextNodeService textNodeService;
     private final ImageNodeService imageNodeService;
     private final NoteChildService noteChildService;
+    private final NoteChildRepository noteChildRepository;
+    private final TextNodeRepository textNodeRepository;
+    private final ImageNodeRepository imageNodeRepository;
     private final ObjectMapper objectMapper;
 
     @Value("${image.upload.dir}")
     private String imageUploadDir;
 
-    public NoteController(JwtUtil jwtUtil, NoteService noteService, TextNodeService textNodeService, ImageNodeService imageNodeService, NoteChildService noteChildService, ObjectMapper objectMapper) {
+    public NoteController(JwtUtil jwtUtil, NoteService noteService, TextNodeService textNodeService, ImageNodeService imageNodeService, NoteChildService noteChildService, NoteChildRepository noteChildRepository, ObjectMapper objectMapper, ImageNodeRepository imageNodeRepository, TextNodeRepository textNodeRepository) {
         this.jwtUtil = jwtUtil;
         this.noteService = noteService;
         this.textNodeService = textNodeService;
         this.imageNodeService = imageNodeService;
-        this.objectMapper = objectMapper;
         this.noteChildService = noteChildService;
+        this.noteChildRepository = noteChildRepository;
+        this.textNodeRepository = textNodeRepository;
+        this.imageNodeRepository = imageNodeRepository;
+        this.objectMapper = objectMapper;
     }
 
     private String getUserIdFromToken(HttpServletRequest request) {
@@ -69,6 +79,7 @@ public class NoteController {
             Note createdNote = noteService.createNoteWithUserAssociation(userId, noteRequest);
             return ResponseEntity.ok(createdNote);
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(500).body("Internal Server Error");
         }
     }
@@ -83,6 +94,7 @@ public class NoteController {
             List<Note> notes = noteService.getAllNotesForUser(userId);
             return ResponseEntity.ok().body(notes);
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(500).body("Internal Server Error");
         }
     }
@@ -98,6 +110,7 @@ public class NoteController {
             List<NoteChildDto> noteChildren = noteChildService.getNoteChildrenByNoteId(noteId);
             return ResponseEntity.ok(noteChildren);
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(500).body("Internal Server Error");
         }
     }
@@ -110,14 +123,17 @@ public class NoteController {
         }
 
         try {
-            textNodeService.addTextEntry(userId, textEntryRequest);
+            noteChildService.addTextEntry(userId, textEntryRequest);
             return ResponseEntity.ok("Created Text Entry Successfully");
         } catch (NoteNotFoundException | InvalidEntryException e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(400).body(e.getMessage());
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(500).body("Internal Server Error");
         }
     }
+
 
     @PutMapping("/text/edit")
     public ResponseEntity<?> editTextNode(HttpServletRequest request, @RequestBody EditTextEntryRequest textEntryRequest) {
@@ -131,8 +147,10 @@ public class NoteController {
             textNodeService.editTextEntry(userId, textEntryRequest);
             return ResponseEntity.ok("Edited Text Entry Successfully");
         } catch (NoteNotFoundException | InvalidEntryException e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(400).body(e.getMessage());
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(500).body("Internal Server Error");
         }
     }
@@ -140,16 +158,18 @@ public class NoteController {
     @DeleteMapping("/text/delete")
     public ResponseEntity<?> deleteTextNode(HttpServletRequest request, @RequestBody DeleteTextEntryRequest deleteTextEntryRequest) {
         String userId = getUserIdFromToken(request);
+        System.out.println(deleteTextEntryRequest);
         if (userId == null) {
             return ResponseEntity.status(401).body("Unauthorized");
         }
-
         try {
             textNodeService.deleteTextEntry(userId, deleteTextEntryRequest);
             return ResponseEntity.ok("Deleted Text Entry Successfully");
         } catch (NoteNotFoundException | InvalidEntryException e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(400).body(e.getMessage());
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(500).body("Internal Server Error");
         }
     }
@@ -157,19 +177,49 @@ public class NoteController {
     @PostMapping(value = "/image/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> createImageNode(HttpServletRequest request, 
                                              @RequestPart("file") MultipartFile file, 
-                                             @RequestPart("data") String data) {
+                                             @RequestPart("noteChildId") String noteChildId) {
         String userId = getUserIdFromToken(request);
         if (userId == null) {
             return ResponseEntity.status(401).body("Unauthorized");
         }
 
         try {
-            AddImageEntryRequest imageEntryRequest = objectMapper.readValue(data, AddImageEntryRequest.class);
-            imageNodeService.addImageEntry(userId, imageEntryRequest, file);
-            return ResponseEntity.ok("Created Image Entry Successfully");
+            // Step 1: Retrieve the NoteChild by noteChildId
+            NoteChild noteChild = noteChildRepository.findById(noteChildId)
+                .orElseThrow(() -> new NoteNotFoundException("Note child not found"));
+
+            // Step 2: Retrieve the TextNode associated with the NoteChild
+            String textNodeId = noteChild.getChildId();
+            TextNode textNode = textNodeRepository.findById(textNodeId)
+                .orElseThrow(() -> new NoteNotFoundException("Text node not found"));
+
+            // Step 3: Create a new ImageNode using the ImageNodeService
+            String imagePath = imageNodeService.saveFileAndGetPath(file);
+            ImageNode imageNode = new ImageNode();
+            imageNode.setImagePath(imagePath);
+            imageNodeRepository.save(imageNode);
+
+            // Step 4: Update the NoteChild to reference the new ImageNode and change its type to 'image'
+            noteChild.setChildId(imageNode.getId());
+            noteChild.setType("image");
+            noteChildRepository.save(noteChild);
+
+            // Step 5: Delete the original TextNode
+            textNodeRepository.deleteById(textNode.getId());
+
+            // Step 6: Return the updated NoteChild with the new image
+            NoteChildDto dto = new NoteChildDto();
+            dto.setId(noteChild.getId());
+            dto.setType("image");
+            dto.setImageNode(imageNode);
+            dto.setPosition(noteChild.getPosition());
+
+            return ResponseEntity.ok(dto);
         } catch (NoteNotFoundException | InvalidEntryException e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(400).body(e.getMessage());
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(500).body("Internal Server Error");
         }
     }
@@ -188,6 +238,7 @@ public class NoteController {
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -206,8 +257,10 @@ public class NoteController {
             imageNodeService.editImageEntry(userId, imageEntryRequest, file);
             return ResponseEntity.ok("Edited Image Entry Successfully");
         } catch (NoteNotFoundException | InvalidEntryException e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(400).body(e.getMessage());
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(500).body("Internal Server Error");
         }
     }
@@ -223,8 +276,10 @@ public class NoteController {
             imageNodeService.deleteImageEntry(userId, deleteImageEntryRequest);
             return ResponseEntity.ok("Deleted Image Entry Successfully");
         } catch (NoteNotFoundException | InvalidEntryException e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(400).body(e.getMessage());
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(500).body("Internal Server Error");
         }
     }
@@ -240,8 +295,10 @@ public class NoteController {
             noteService.editNoteTitle(userId, editNoteTitleRequest);
             return ResponseEntity.ok("Edited Note Title Successfully");
         } catch (NoteNotFoundException | InvalidEntryException e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(400).body(e.getMessage());
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(500).body("Internal Server Error");
         }
     }
@@ -257,8 +314,10 @@ public class NoteController {
             noteService.deleteNote(userId, deleteNoteRequest);
             return ResponseEntity.ok("Deleted Note Successfully");
         } catch (NoteNotFoundException | InvalidEntryException e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(400).body(e.getMessage());
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             return ResponseEntity.status(500).body("Internal Server Error");
         }
     }

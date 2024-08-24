@@ -1,6 +1,5 @@
 package com.itsvitaliio.backend.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.itsvitaliio.backend.dto.AddImageEntryRequest;
 import com.itsvitaliio.backend.dto.DeleteImageEntryRequest;
 import com.itsvitaliio.backend.dto.EditImageEntryRequest;
@@ -38,13 +37,16 @@ public class ImageNodeService {
     private final ImageNodeRepository imageNodeRepository;
     private final NoteChildRepository noteChildRepository;
     private final UserNoteRepository userNoteRepository;
+    private final NoteChildService noteChildService;
 
     public ImageNodeService(NoteRepository noteRepository, ImageNodeRepository imageNodeRepository,
-                            NoteChildRepository noteChildRepository, UserNoteRepository userNoteRepository) {
+                            NoteChildRepository noteChildRepository, UserNoteRepository userNoteRepository,
+                            NoteChildService noteChildService) {
         this.noteRepository = noteRepository;
         this.imageNodeRepository = imageNodeRepository;
         this.noteChildRepository = noteChildRepository;
         this.userNoteRepository = userNoteRepository;
+        this.noteChildService = noteChildService;
     }
 
     private boolean isPositionDuplicate(String noteId, int position) {
@@ -55,7 +57,7 @@ public class ImageNodeService {
         return UUID.randomUUID().toString().replace("-", "");
     }
 
-    private String saveFileAndGetPath(MultipartFile file) throws IOException {
+    public String saveFileAndGetPath(MultipartFile file) throws IOException {
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null) {
             throw new IOException("File must have an original filename");
@@ -77,19 +79,19 @@ public class ImageNodeService {
         }
 
         if (isPositionDuplicate(noteId, request.getPosition())) {
-            throw new InvalidEntryException("Position " + request.getPosition() + " is already taken for note " + noteId);
+            noteChildService.shiftPositionsUpward(noteId, request.getPosition());
         }
 
         String imagePath = saveFileAndGetPath(file);
 
         ImageNode imageNode = new ImageNode();
         imageNode.setId(UUID.randomUUID().toString());
-        imageNode.setImagePath(imagePath);  // Set the new image path here
+        imageNode.setImagePath(imagePath);
         imageNodeRepository.save(imageNode);
 
         NoteChild noteChild = new NoteChild();
         noteChild.setId(UUID.randomUUID().toString());
-        noteChild.setNote(noteRepository.findById(noteId).orElseThrow(() -> new NoteNotFoundException("Note not found")));
+        noteChild.setNoteId(noteId);  // Set noteId directly
         noteChild.setType("image");
         noteChild.setChildId(imageNode.getId());
         noteChild.setPosition(request.getPosition());
@@ -99,7 +101,7 @@ public class ImageNodeService {
         dto.setId(noteChild.getId());
         dto.setType(noteChild.getType());
         dto.setImageNode(imageNode);
-        dto.setPosition(noteChild.getPosition());  // Set position
+        dto.setPosition(noteChild.getPosition());
 
         return dto;
     }
@@ -116,7 +118,7 @@ public class ImageNodeService {
             throw new InvalidEntryException("Image entry does not belong to the specified note");
         }
 
-        String newImagePath = saveFileAndGetPath(file);  // Save the file and get the new path
+        String newImagePath = saveFileAndGetPath(file);
         imageNode.setImagePath(newImagePath);
         imageNodeRepository.save(imageNode);
     }
@@ -130,10 +132,11 @@ public class ImageNodeService {
             throw new NoteNotFoundException("User and note do not match");
         }
 
-        NoteChild noteChild = noteChildRepository.findByNoteIdAndChildId(noteId, imageEntryId)
-                .orElseThrow(() -> new InvalidEntryException("Image entry not found in the note"));
+        NoteChild noteChildToDelete = noteChildRepository.findByNoteIdAndChildId(noteId, imageEntryId)
+                .orElseThrow(() -> new InvalidEntryException("Note child not found"));
+
+        noteChildService.deleteNoteChild(noteId, imageEntryId);
 
         imageNodeRepository.deleteById(imageEntryId);
-        noteChildRepository.delete(noteChild);
     }
 }

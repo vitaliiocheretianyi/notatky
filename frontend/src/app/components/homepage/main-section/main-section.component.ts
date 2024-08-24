@@ -1,9 +1,10 @@
 import { Component, Input, OnInit, OnChanges, SimpleChanges, ViewChildren, QueryList, ElementRef, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, FormControl } from '@angular/forms';
-import { debounceTime } from 'rxjs/operators';
+import { catchError, debounceTime, tap } from 'rxjs/operators';
 import { NoteService } from '../../../services/note.service';
 import { Note, NoteChild } from '../../../models/note.model';
+import { Observable, of, throwError } from 'rxjs';
 
 @Component({
   selector: 'app-main-section',
@@ -24,6 +25,10 @@ export class MainSectionComponent implements OnInit, OnChanges {
   originalContent: string[] = [];
   initialLoad: boolean = true;
   @ViewChildren('noteContent') noteContentElements!: QueryList<ElementRef>;
+
+  dropdownVisible: boolean[] = [];  // To track dropdown visibility
+  filteredOptions: string[] = ['image'];  // List of options
+  highlightedIndex: number = 0;  // Track the highlighted option index
 
   constructor(private fb: FormBuilder, private noteService: NoteService) {}
 
@@ -56,7 +61,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
     if (note) {
       this.noteForm.setControl('title', this.fb.control(note.title));
       
-      this.noteService.getNoteChildren(this.selectedNoteId).subscribe({
+      this.noteService.getNoteChildren(this.selectedNoteId!).subscribe({
         next: (response: any) => {
           this.loadNoteChildren(response.data);
           setTimeout(() => this.initialLoad = false, 0);
@@ -70,22 +75,44 @@ export class MainSectionComponent implements OnInit, OnChanges {
     const contentsArray = this.fb.array([]);
     this.metadata = [];
     this.originalContent = [];
-    
+
     children.sort((a, b) => a.position - b.position).forEach((child, index) => {
       if (child.type === 'text' && child.textNode) {
         const control = this.fb.control(child.textNode.content);
         contentsArray.push(control);
-        this.metadata.push({ childId: child.textNode.id });
+        this.metadata.push({ childId: child.id }); // Track by NoteChild ID
         this.originalContent.push(child.textNode.content);
+      } else if (child.type === 'image' && child.imageNode) {
+        const imagePath = child.imageNode.imagePath; // Access imagePath directly
+
+        if (imagePath) {
+          // Create a placeholder control for the image
+          const control = this.fb.control('');
+          contentsArray.push(control);
+          this.metadata.push({ childId: child.id }); // Track by NoteChild ID
+          this.originalContent.push(''); // No text content for image nodes
+
+          // Render the image directly in the DOM after the control is set
+          setTimeout(() => {
+            const textareaElement = this.noteContentElements.toArray()[index].nativeElement;
+            const imageElement = document.createElement('img');
+            imageElement.src = `${this.noteService.getImageUrl(imagePath)}`; // Use the correct URL from the service
+            imageElement.alt = 'Uploaded Image';
+            imageElement.style.maxWidth = '100%';
+
+            textareaElement.parentNode.replaceChild(imageElement, textareaElement);
+          }, 0);
+        } else {
+          console.error('imagePath is undefined');
+        }
       }
     });
 
-    // Ensure at least one empty content field exists
-    if (contentsArray.length === 0) {
-      this.addEmptyContentField(contentsArray);
-    }
-
     this.noteForm.setControl('contents', contentsArray);
+
+    // Ensure there's always an empty textarea at the end
+    this.addEmptyContentField(contentsArray);
+
     this.setFormValueChanges();
   }
 
@@ -113,43 +140,176 @@ export class MainSectionComponent implements OnInit, OnChanges {
 
   handleKeyDown(event: KeyboardEvent, contentIndex: number) {
     const contentControl = this.contents.at(contentIndex) as FormControl;
-    if (event.shiftKey && event.key === 'Enter') {
+    const textareaElement = this.noteContentElements.toArray()[contentIndex]?.nativeElement;
+
+    if (textareaElement && event.shiftKey && event.key === 'Enter') {
       event.preventDefault();
-      this.addContentField(contentIndex + 1);
-    } else if ((event.key === 'Backspace' || event.key === 'Delete') && contentControl.value.trim() === '') {
+
+      if (this.isInEmptyTextarea(contentIndex)) {
+        // If already in the last empty textarea, ignore the Shift+Enter
+        return;
+      }
+
+      if (this.isLastTextNode(contentIndex)) {
+        this.moveToNextEmptyTextNode(contentIndex);
+      } else {
+        this.addContentField(contentIndex + 1);
+      }
+    } else if (textareaElement && event.key === 'Backspace') {
+      if (textareaElement.selectionStart === 0 && contentControl.value.length === 0) {
+        if (this.metadata[contentIndex].childId) {
+          this.deleteContentField(contentIndex);
+          setTimeout(() => this.moveToPreviousTextNode(contentIndex), 0);
+        } else if (contentIndex > 0) {
+          const previousChildId = this.metadata[contentIndex - 1]?.childId;
+          const previousChildType = this.noteChildren.find(child => child.id === previousChildId)?.type;
+
+          if (previousChildType === 'image') {
+            this.deleteContentField(contentIndex - 1);
+            setTimeout(() => this.moveToPreviousTextNode(contentIndex - 1), 0);
+          } else {
+            this.moveToPreviousTextNode(contentIndex);
+          }
+        }
+        event.preventDefault();
+      } else if (textareaElement.selectionStart === 0 && contentIndex > 0) {
+        const previousControl = this.contents.at(contentIndex - 1) as FormControl;
+        const previousChildId = this.metadata[contentIndex - 1]?.childId;
+
+        if (previousChildId) {
+          const previousChildType = this.noteChildren.find(child => child.id === previousChildId)?.type;
+
+          if (previousChildType === 'text') {
+            setTimeout(() => {
+              const previousTextareaElement = this.noteContentElements.toArray()[contentIndex - 1]?.nativeElement;
+              if (previousTextareaElement) {
+                previousTextareaElement.focus();
+                previousTextareaElement.setSelectionRange(previousControl.value.length, previousControl.value.length);
+              }
+            }, 0);
+            event.preventDefault();
+          }
+        }
+      }
+    } else if (event.key === 'Delete' && contentControl.value.trim() === '') {
       event.preventDefault();
       this.deleteContentField(contentIndex);
+    } else if (event.key === 'ArrowDown') {
+      this.highlightedIndex = (this.highlightedIndex + 1) % this.filteredOptions.length;
+    } else if (event.key === 'ArrowUp') {
+      this.highlightedIndex = (this.highlightedIndex - 1 + this.filteredOptions.length) % this.filteredOptions.length;
+    } else if (event.key === 'Enter' && this.dropdownVisible[contentIndex]) {
+      event.preventDefault();
+      this.handleOptionClick(contentIndex, this.filteredOptions[this.highlightedIndex]);
     }
   }
 
-  addContentField(position: number) {
-    const control = this.fb.control('');
-    this.contents.insert(position, control);
-    this.metadata.splice(position, 0, { childId: null });
-    this.originalContent.splice(position, 0, '');
-    this.notesUpdated.emit();
-    this.setFormValueChanges();
-
-    setTimeout(() => this.noteContentElements.toArray()[position].nativeElement.focus(), 0);
+  isLastTextNode(contentIndex: number): boolean {
+    return (
+      contentIndex === this.contents.length - 2 &&
+      this.metadata[contentIndex].childId !== null &&
+      this.metadata[contentIndex + 1].childId === null
+    );
   }
 
-  deleteContentField(contentIndex: number) {
-    const noteId = this.selectedNoteId;
-    const textEntryId = this.metadata[contentIndex].childId;
+  isInEmptyTextarea(contentIndex: number): boolean {
+    return (
+      contentIndex === this.contents.length - 1 &&
+      this.metadata[contentIndex].childId === null &&
+      this.contents.at(contentIndex).value === ''
+    );
+  }
 
-    if (noteId && textEntryId) {
-      this.noteService.deleteTextEntry(noteId, textEntryId).subscribe(() => {
-        this.contents.removeAt(contentIndex);
-        this.metadata.splice(contentIndex, 1);
-        this.originalContent.splice(contentIndex, 1);
-        this.addEmptyContentFieldIfNecessary(); // Check if an empty field needs to be added
-        this.notesUpdated.emit();
-      }, (error: any) => console.error('Error deleting text entry:', error));
+  moveToNextEmptyTextNode(contentIndex: number) {
+    if (contentIndex < this.contents.length - 1) {
+      setTimeout(() => {
+        const nextTextareaElement = this.noteContentElements.toArray()[contentIndex + 1]?.nativeElement;
+        if (nextTextareaElement) {
+          nextTextareaElement.focus();
+          nextTextareaElement.setSelectionRange(0, 0);
+        }
+      }, 0);
+    }
+  }
+
+  moveToPreviousTextNode(contentIndex: number) {
+    if (contentIndex > 0) {
+      const previousControl = this.contents.at(contentIndex - 1) as FormControl;
+      const previousChildId = this.metadata[contentIndex - 1].childId;
+
+      if (previousChildId) {
+        const previousChildType = this.noteChildren.find(child => child.id === previousChildId)?.type;
+
+        if (previousChildType === 'text') {
+          const previousTextareaElement = this.noteContentElements.toArray()[contentIndex - 1].nativeElement;
+          previousTextareaElement.focus();
+          previousTextareaElement.setSelectionRange(previousControl.value.length, previousControl.value.length);
+        }
+      }
+    }
+  }
+
+  handleInput(event: Event, contentIndex: number) {
+    const input = (event.target as HTMLTextAreaElement).value;
+    if (input === '/') {
+      this.dropdownVisible[contentIndex] = true;
+    } else if (this.dropdownVisible[contentIndex]) {
+      this.filteredOptions = this.filteredOptions.filter(option =>
+        option.toLowerCase().includes(input.substring(1).toLowerCase())
+      );
+      if (this.filteredOptions.length === 0) {
+        this.dropdownVisible[contentIndex] = false;
+      }
     } else {
+      this.dropdownVisible[contentIndex] = false;
+    }
+  }
+
+  handleOptionClick(contentIndex: number, option: string) {
+    if (option === 'image') {
+      const noteChildId = this.metadata[contentIndex]?.childId;
+      if (noteChildId) {
+        this.uploadImage(noteChildId);
+      }
+    }
+    this.dropdownVisible[contentIndex] = false;
+  }
+
+  uploadImage(noteChildId: string) {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.onchange = () => {
+      const file = fileInput.files ? fileInput.files[0] : null;
+      if (file && noteChildId) {
+        this.noteService.uploadImage(this.selectedNoteId!, file, noteChildId).subscribe((response: any) => {
+          this.replaceTextNodeWithImage(noteChildId, response.imagePath);
+          this.reloadNoteChildren(this.selectedNoteId!); // Optional: Reload the note children
+        }, (error: any) => console.error('Error uploading image:', error));
+      }
+    };
+    fileInput.click();
+  }
+
+  replaceTextNodeWithImage(noteChildId: string, imagePath: string) {
+    const contentIndex = this.metadata.findIndex(meta => meta.childId === noteChildId);
+    if (contentIndex !== -1) {
       this.contents.removeAt(contentIndex);
       this.metadata.splice(contentIndex, 1);
       this.originalContent.splice(contentIndex, 1);
-      this.addEmptyContentFieldIfNecessary(); // Check if an empty field needs to be added
+      
+      const imageControl = this.fb.control(''); // Placeholder control for the image
+      this.contents.insert(contentIndex, imageControl);
+
+      setTimeout(() => {
+        const textareaElement = this.noteContentElements.toArray()[contentIndex].nativeElement;
+        const imageElement = document.createElement('img');
+        imageElement.src = `${this.noteService.getImageUrl(imagePath)}`;
+        imageElement.alt = 'Uploaded Image';
+        imageElement.style.maxWidth = '100%';
+
+        textareaElement.parentNode.replaceChild(imageElement, textareaElement);
+      }, 0);
     }
   }
 
@@ -159,25 +319,43 @@ export class MainSectionComponent implements OnInit, OnChanges {
 
     if (newText !== this.originalContent[contentIndex]) {
       if (!this.metadata[contentIndex].childId) {
-        this.createTextEntry(contentIndex);
+        this.createTextEntry(contentIndex).subscribe((response: any) => {
+          if (response) {
+            this.metadata[contentIndex].childId = response.id;
+            this.originalContent[contentIndex] = newText;
+
+            this.reloadNoteChildren(this.selectedNoteId!).subscribe(() => {
+              setTimeout(() => {
+                this.noteContentElements.toArray()[contentIndex].nativeElement.focus();
+              }, 0);
+            });
+          }
+        });
       } else {
         this.saveTextEntry(contentIndex);
       }
     }
   }
 
-  createTextEntry(contentIndex: number) {
+  createTextEntry(contentIndex: number): Observable<any> {
     const contentControl = this.contents.at(contentIndex) as FormControl;
     const noteId = this.selectedNoteId;
     const newText = contentControl.value.trim();
 
     if (noteId && newText !== '') {
-      this.noteService.createTextEntry(noteId, newText, contentIndex).subscribe((response: any) => {
-        this.metadata[contentIndex].childId = response.id;
-        this.originalContent[contentIndex] = newText;
-        this.reloadNoteChildren(noteId); // Reload the note's children to reflect the new state
-      }, (error: any) => console.error('Error creating text entry:', error));
+      return this.noteService.createTextEntry(noteId, newText, contentIndex).pipe(
+        tap((response: any) => {
+          this.metadata[contentIndex].childId = response.id;
+          this.originalContent[contentIndex] = newText;
+        }),
+        catchError(error => {
+          console.error('Error creating text entry:', error);
+          return throwError(error);
+        })
+      );
     }
+
+    return of(null);
   }
 
   saveTextEntry(contentIndex: number) {
@@ -202,22 +380,50 @@ export class MainSectionComponent implements OnInit, OnChanges {
     }
   }
 
-  reloadNoteChildren(noteId: string) {
-    this.noteService.getNoteChildren(noteId).subscribe({
-      next: (response: any) => {
-        this.loadNoteChildren(response.data);
-        // Focus on the last content field after reloading
-        setTimeout(() => {
-          const lastIndex = this.contents.length - 1;
-          this.noteContentElements.toArray()[lastIndex].nativeElement.focus();
-        }, 0);
-      },
-      error: (error: any) => console.error('Error reloading note children:', error)
-    });
+  reloadNoteChildren(noteId: string): Observable<any> {
+    return this.noteService.getNoteChildren(noteId).pipe(
+      tap({
+        next: (response: any) => {
+          this.loadNoteChildren(response.data);
+        },
+        error: (error: any) => console.error('Error reloading note children:', error)
+      })
+    );
+  }
+
+  addContentField(position: number) {
+    const control = this.fb.control('');
+    this.contents.insert(position, control);
+    this.metadata.splice(position, 0, { childId: null });
+    this.originalContent.splice(position, 0, '');
+    this.notesUpdated.emit();
+    this.setFormValueChanges();
+
+    setTimeout(() => this.noteContentElements.toArray()[position].nativeElement.focus(), 0);
+  }
+
+  deleteContentField(contentIndex: number) {
+    const noteId = this.selectedNoteId;
+    const noteChildId = this.metadata[contentIndex].childId;
+
+    if (noteId && noteChildId) {
+      this.noteService.deleteTextEntry(noteId, noteChildId).subscribe(() => {
+        this.contents.removeAt(contentIndex);
+        this.metadata.splice(contentIndex, 1);
+        this.originalContent.splice(contentIndex, 1);
+        this.addEmptyContentFieldIfNecessary();
+        this.notesUpdated.emit();
+      }, (error: any) => console.error('Error deleting text entry:', error));
+    } else {
+      this.contents.removeAt(contentIndex);
+      this.metadata.splice(contentIndex, 1);
+      this.originalContent.splice(contentIndex, 1);
+      this.addEmptyContentFieldIfNecessary();
+    }
   }
 
   addEmptyContentFieldIfNecessary() {
-    if (this.contents.length === 0) {
+    if (this.contents.length === 0 || this.metadata[this.metadata.length - 1].childId !== null) {
       this.addEmptyContentField(this.contents);
     }
   }
