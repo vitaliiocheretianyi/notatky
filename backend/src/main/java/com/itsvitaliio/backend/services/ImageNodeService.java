@@ -68,18 +68,17 @@ public class ImageNodeService {
         Path fileNameAndPath = Paths.get(imageUploadDir, randomFileName);
         Files.write(fileNameAndPath, file.getBytes());
 
-        return randomFileName;
+        return fileNameAndPath.getFileName().toString(); // Return filename only
     }
 
     @Transactional
-    public NoteChildDto addImageEntry(String userId, AddImageEntryRequest request, MultipartFile file) throws IOException {
-        String noteId = request.getNoteId();
+    public NoteChildDto addImageEntry(String userId, String noteId, String noteChildId, MultipartFile file) throws IOException {
         if (!userNoteRepository.existsByUserIdAndNoteId(userId, noteId)) {
             throw new NoteNotFoundException("User and note do not match");
         }
 
-        if (isPositionDuplicate(noteId, request.getPosition())) {
-            noteChildService.shiftPositionsUpward(noteId, request.getPosition());
+        if (!noteChildRepository.existsById(noteChildId)) {
+            throw new InvalidEntryException("Note child does not exist");
         }
 
         String imagePath = saveFileAndGetPath(file);
@@ -89,12 +88,11 @@ public class ImageNodeService {
         imageNode.setImagePath(imagePath);
         imageNodeRepository.save(imageNode);
 
-        NoteChild noteChild = new NoteChild();
-        noteChild.setId(UUID.randomUUID().toString());
-        noteChild.setNoteId(noteId);  // Set noteId directly
-        noteChild.setType("image");
+        NoteChild noteChild = noteChildRepository.findById(noteChildId)
+                .orElseThrow(() -> new InvalidEntryException("Note child not found"));
+
         noteChild.setChildId(imageNode.getId());
-        noteChild.setPosition(request.getPosition());
+        noteChild.setType("image");
         noteChildRepository.save(noteChild);
 
         NoteChildDto dto = new NoteChildDto();

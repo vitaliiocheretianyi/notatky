@@ -26,9 +26,9 @@ export class MainSectionComponent implements OnInit, OnChanges {
   initialLoad: boolean = true;
   @ViewChildren('noteContent') noteContentElements!: QueryList<ElementRef>;
 
-  dropdownVisible: boolean[] = [];  // To track dropdown visibility
-  filteredOptions: string[] = ['image'];  // List of options
-  highlightedIndex: number = 0;  // Track the highlighted option index
+  dropdownVisible: boolean[] = [];
+  filteredOptions: string[] = ['image'];
+  highlightedIndex: number = 0;
 
   constructor(private fb: FormBuilder, private noteService: NoteService) {}
 
@@ -44,6 +44,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
       this.loadNoteChildren(this.noteChildren);
     }
   }
+  
 
   initializeForm() {
     this.noteForm = this.fb.group({
@@ -60,7 +61,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
     const note = this.notes.find(n => n.id === this.selectedNoteId);
     if (note) {
       this.noteForm.setControl('title', this.fb.control(note.title));
-      
+
       this.noteService.getNoteChildren(this.selectedNoteId!).subscribe({
         next: (response: any) => {
           this.loadNoteChildren(response.data);
@@ -75,46 +76,46 @@ export class MainSectionComponent implements OnInit, OnChanges {
     const contentsArray = this.fb.array([]);
     this.metadata = [];
     this.originalContent = [];
-
+  
     children.sort((a, b) => a.position - b.position).forEach((child, index) => {
       if (child.type === 'text' && child.textNode) {
         const control = this.fb.control(child.textNode.content);
         contentsArray.push(control);
-        this.metadata.push({ childId: child.id }); // Track by NoteChild ID
+        this.metadata.push({ childId: child.id });
         this.originalContent.push(child.textNode.content);
       } else if (child.type === 'image' && child.imageNode) {
-        const imagePath = child.imageNode.imagePath; // Access imagePath directly
-
+        const imagePath = child.imageNode.imagePath;
+  
         if (imagePath) {
-          // Create a placeholder control for the image
           const control = this.fb.control('');
           contentsArray.push(control);
-          this.metadata.push({ childId: child.id }); // Track by NoteChild ID
-          this.originalContent.push(''); // No text content for image nodes
-
-          // Render the image directly in the DOM after the control is set
+          this.metadata.push({ childId: child.id });
+          this.originalContent.push('');
+  
           setTimeout(() => {
-            const textareaElement = this.noteContentElements.toArray()[index].nativeElement;
-            const imageElement = document.createElement('img');
-            imageElement.src = `${this.noteService.getImageUrl(imagePath)}`; // Use the correct URL from the service
-            imageElement.alt = 'Uploaded Image';
-            imageElement.style.maxWidth = '100%';
-
-            textareaElement.parentNode.replaceChild(imageElement, textareaElement);
+            const textareaElement = this.noteContentElements.toArray()[index]?.nativeElement;
+            if (textareaElement && textareaElement.parentNode) {
+              const imageElement = document.createElement('img');
+              imageElement.src = `${this.noteService.getImageUrl(imagePath)}`;
+              imageElement.alt = 'Uploaded Image';
+              imageElement.style.maxWidth = '100%';
+  
+              textareaElement.parentNode.replaceChild(imageElement, textareaElement);
+            } else {
+              console.error('Textarea element or its parent node is not available');
+            }
           }, 0);
         } else {
           console.error('imagePath is undefined');
         }
       }
     });
-
+  
     this.noteForm.setControl('contents', contentsArray);
-
-    // Ensure there's always an empty textarea at the end
     this.addEmptyContentField(contentsArray);
-
     this.setFormValueChanges();
   }
+  
 
   setFormValueChanges() {
     if (!this.noteForm) return;
@@ -146,7 +147,6 @@ export class MainSectionComponent implements OnInit, OnChanges {
       event.preventDefault();
 
       if (this.isInEmptyTextarea(contentIndex)) {
-        // If already in the last empty textarea, ignore the Shift+Enter
         return;
       }
 
@@ -194,9 +194,11 @@ export class MainSectionComponent implements OnInit, OnChanges {
     } else if (event.key === 'Delete' && contentControl.value.trim() === '') {
       event.preventDefault();
       this.deleteContentField(contentIndex);
-    } else if (event.key === 'ArrowDown') {
+    } else if (event.key === 'ArrowDown' && this.dropdownVisible[contentIndex]) {
+      event.preventDefault();
       this.highlightedIndex = (this.highlightedIndex + 1) % this.filteredOptions.length;
-    } else if (event.key === 'ArrowUp') {
+    } else if (event.key === 'ArrowUp' && this.dropdownVisible[contentIndex]) {
+      event.preventDefault();
       this.highlightedIndex = (this.highlightedIndex - 1 + this.filteredOptions.length) % this.filteredOptions.length;
     } else if (event.key === 'Enter' && this.dropdownVisible[contentIndex]) {
       event.preventDefault();
@@ -253,6 +255,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
     const input = (event.target as HTMLTextAreaElement).value;
     if (input === '/') {
       this.dropdownVisible[contentIndex] = true;
+      this.highlightedIndex = 0;
     } else if (this.dropdownVisible[contentIndex]) {
       this.filteredOptions = this.filteredOptions.filter(option =>
         option.toLowerCase().includes(input.substring(1).toLowerCase())
@@ -270,6 +273,8 @@ export class MainSectionComponent implements OnInit, OnChanges {
       const noteChildId = this.metadata[contentIndex]?.childId;
       if (noteChildId) {
         this.uploadImage(noteChildId);
+      } else {
+        this.createImageEntry(contentIndex);
       }
     }
     this.dropdownVisible[contentIndex] = false;
@@ -282,13 +287,49 @@ export class MainSectionComponent implements OnInit, OnChanges {
     fileInput.onchange = () => {
       const file = fileInput.files ? fileInput.files[0] : null;
       if (file && noteChildId) {
-        this.noteService.uploadImage(this.selectedNoteId!, file, noteChildId).subscribe((response: any) => {
-          this.replaceTextNodeWithImage(noteChildId, response.imagePath);
-          this.reloadNoteChildren(this.selectedNoteId!); // Optional: Reload the note children
-        }, (error: any) => console.error('Error uploading image:', error));
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('noteId', this.selectedNoteId!);
+        formData.append('noteChildId', noteChildId);
+  
+        this.noteService.uploadImage(formData).subscribe({
+          next: (response: any) => {
+            const imagePath = response.imagePath; // Make sure imagePath is correctly assigned
+            this.reloadNoteChildren(this.selectedNoteId!).subscribe(() => {
+              setTimeout(() => {
+                const index = this.metadata.findIndex(meta => meta.childId === noteChildId);
+                if (index !== -1) {
+                  const textareaElement = this.noteContentElements.toArray()[index]?.nativeElement;
+                  if (textareaElement && textareaElement.parentNode) {
+                    const imageElement = document.createElement('img');
+                    imageElement.src = `${this.noteService.getImageUrl(imagePath)}`; // Use imagePath here
+                    imageElement.alt = 'Uploaded Image';
+                    imageElement.style.maxWidth = '100%';
+  
+                    textareaElement.parentNode.replaceChild(imageElement, textareaElement);
+                  }
+                }
+              }, 0);
+            });
+          },
+          error: (error: any) => console.error('Error uploading image:', error)
+        });
       }
     };
     fileInput.click();
+  }
+  
+  
+  
+
+
+  createImageEntry(contentIndex: number) {
+    const noteId = this.selectedNoteId;
+    const control = this.contents.at(contentIndex) as FormControl;
+
+    if (noteId && control.value.trim() === '') {
+      this.uploadImage(this.metadata[contentIndex].childId || '');
+    }
   }
 
   replaceTextNodeWithImage(noteChildId: string, imagePath: string) {
@@ -297,8 +338,8 @@ export class MainSectionComponent implements OnInit, OnChanges {
       this.contents.removeAt(contentIndex);
       this.metadata.splice(contentIndex, 1);
       this.originalContent.splice(contentIndex, 1);
-      
-      const imageControl = this.fb.control(''); // Placeholder control for the image
+
+      const imageControl = this.fb.control('');
       this.contents.insert(contentIndex, imageControl);
 
       setTimeout(() => {
@@ -316,14 +357,14 @@ export class MainSectionComponent implements OnInit, OnChanges {
   handleTextChange(contentIndex: number) {
     const contentControl = this.contents.at(contentIndex) as FormControl;
     const newText = contentControl.value.trim();
-
+  
     if (newText !== this.originalContent[contentIndex]) {
       if (!this.metadata[contentIndex].childId) {
         this.createTextEntry(contentIndex).subscribe((response: any) => {
           if (response) {
             this.metadata[contentIndex].childId = response.id;
             this.originalContent[contentIndex] = newText;
-
+  
             this.reloadNoteChildren(this.selectedNoteId!).subscribe(() => {
               setTimeout(() => {
                 this.noteContentElements.toArray()[contentIndex].nativeElement.focus();
@@ -333,9 +374,11 @@ export class MainSectionComponent implements OnInit, OnChanges {
         });
       } else {
         this.saveTextEntry(contentIndex);
+        this.reloadNoteChildren(this.selectedNoteId!); // Add this line to reload children after saving the text entry
       }
     }
   }
+  
 
   createTextEntry(contentIndex: number): Observable<any> {
     const contentControl = this.contents.at(contentIndex) as FormControl;
@@ -384,12 +427,15 @@ export class MainSectionComponent implements OnInit, OnChanges {
     return this.noteService.getNoteChildren(noteId).pipe(
       tap({
         next: (response: any) => {
-          this.loadNoteChildren(response.data);
+          this.noteChildren = response.data;
+          this.loadNoteChildren(this.noteChildren);
         },
         error: (error: any) => console.error('Error reloading note children:', error)
       })
     );
   }
+  
+  
 
   addContentField(position: number) {
     const control = this.fb.control('');

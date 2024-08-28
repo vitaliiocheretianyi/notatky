@@ -62,12 +62,14 @@ export class HomepageComponent implements OnInit, AfterViewInit {
     this.loadNoteChildren(noteId);
     setTimeout(() => {
       if (this.mainSectionComponent) {
+        this.mainSectionComponent.noteChildren = this.noteChildren; // Update the noteChildren input
         this.mainSectionComponent.loadNote(); // Ensure the selected note is loaded in the main section
       } else {
         console.error('MainSectionComponent is not initialized');
       }
     }, 0);
   }
+  
 
   onNoteDeleted(noteId: string) {
     this.noteService.deleteNote(noteId).subscribe({

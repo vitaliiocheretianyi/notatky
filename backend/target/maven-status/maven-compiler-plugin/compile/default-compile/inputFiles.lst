@@ -18,6 +18,7 @@
 /app/src/main/java/com/itsvitaliio/backend/dto/EditImageEntryRequest.java
 /app/src/main/java/com/itsvitaliio/backend/dto/EditNoteTitleRequest.java
 /app/src/main/java/com/itsvitaliio/backend/dto/EditTextEntryRequest.java
+/app/src/main/java/com/itsvitaliio/backend/dto/ImageUploadRequest.java
 /app/src/main/java/com/itsvitaliio/backend/dto/LoginRequest.java
 /app/src/main/java/com/itsvitaliio/backend/dto/NoteChildDto.java
 /app/src/main/java/com/itsvitaliio/backend/dto/RegisterRequest.java

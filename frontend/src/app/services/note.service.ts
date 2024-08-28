@@ -2,11 +2,18 @@ import { Injectable } from '@angular/core';
 import axios from 'axios';
 import { from, Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+
+interface ImageUploadRequest {
+  noteId: string;
+  noteChildId: string;
+  userId: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class NoteService {
-  private apiUrl = 'http://localhost:8080/notatky'; // Replace with your API URL
+  private apiUrl = 'http://localhost:8080/notatky';
 
   constructor() {}
 
@@ -104,21 +111,16 @@ export class NoteService {
     );
   }
 
-  uploadImage(noteId: string, file: File, noteChildId: string): Observable<any> {
+  uploadImage(formData: FormData): Observable<any> {
     const url = `${this.apiUrl}/image/create`;
-    const headers = this.getHeaders();
-    const formData = new FormData();
-
-    const data = { noteId, noteChildId }; // Send noteChildId to the backend
-    formData.append('file', file);
-    formData.append('data', JSON.stringify(data));
+    const headers = this.getHeaders(); // This might need to handle multipart/form-data correctly
 
     return from(axios.post(url, formData, { headers: { ...headers, 'Content-Type': 'multipart/form-data' } })).pipe(
-      catchError(error => this.handleError(error))
+        catchError(error => this.handleError(error))
     );
-  }
+}
 
-  // New method to get the image URL
+
   getImageUrl(filename: string): string {
     return `${this.apiUrl}/${filename}`;
   }
