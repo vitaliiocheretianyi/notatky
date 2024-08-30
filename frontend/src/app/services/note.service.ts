@@ -120,6 +120,14 @@ export class NoteService {
     );
 }
 
+deleteImageEntry(noteId: string, imageEntryId: string): Observable<any> {
+  const url = `${this.apiUrl}/image/delete`;
+  const headers = this.getHeaders();
+  return from(axios.delete(url, { headers, data: { noteId, imageEntryId } })).pipe(
+    catchError(error => this.handleTokenExpiration(error)),
+    catchError(error => this.handleError(error))
+  );
+}
 
   getImageUrl(filename: string): string {
     return `${this.apiUrl}/${filename}`;

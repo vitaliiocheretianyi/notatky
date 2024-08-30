@@ -248,7 +248,7 @@ public class NoteController {
         if (userId == null) {
             return ResponseEntity.status(401).body("Unauthorized");
         }
-    
+
         try {
             System.out.println("Deleting image node with ID: " + deleteImageEntryRequest.getImageEntryId() + " from Note ID: " + deleteImageEntryRequest.getNoteId());
             imageNodeService.deleteImageEntry(userId, deleteImageEntryRequest);
@@ -261,6 +261,7 @@ public class NoteController {
             return ResponseEntity.status(500).body("Internal Server Error");
         }
     }
+
     
     @PutMapping("/edit")
     public ResponseEntity<?> editNoteTitle(HttpServletRequest request, @RequestBody EditNoteTitleRequest editNoteTitleRequest) {

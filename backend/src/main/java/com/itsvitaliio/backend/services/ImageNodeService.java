@@ -124,17 +124,32 @@ public class ImageNodeService {
     @Transactional
     public void deleteImageEntry(String userId, DeleteImageEntryRequest request) {
         String noteId = request.getNoteId();
-        String imageEntryId = request.getImageEntryId();
+        String noteChildId = request.getImageEntryId(); // This is actually the noteChildId
 
+        // Verify that the user has access to this note
         if (!userNoteRepository.existsByUserIdAndNoteId(userId, noteId)) {
             throw new NoteNotFoundException("User and note do not match");
         }
 
-        NoteChild noteChildToDelete = noteChildRepository.findByNoteIdAndChildId(noteId, imageEntryId)
+        // Find the note child entry by noteId and noteChildId
+        NoteChild noteChildToDelete = noteChildRepository.findById(noteChildId)
                 .orElseThrow(() -> new InvalidEntryException("Note child not found"));
 
-        noteChildService.deleteNoteChild(noteId, imageEntryId);
+        // Ensure the note child is associated with the provided note ID
+        if (!noteChildToDelete.getNoteId().equals(noteId)) {
+            throw new InvalidEntryException("Note child is not associated with the provided note ID");
+        }
 
-        imageNodeRepository.deleteById(imageEntryId);
+        // Locate the associated image node ID
+        String imageNodeId = noteChildToDelete.getChildId();
+
+        // Delete the NoteChild entry
+        noteChildService.deleteNoteChild(noteId, noteChildId);
+
+        // Delete the associated ImageNode entry
+        imageNodeRepository.deleteById(imageNodeId);
     }
+
+
+
 }

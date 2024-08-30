@@ -141,44 +141,58 @@ export class MainSectionComponent implements OnInit, OnChanges {
 
   handleKeyDown(event: KeyboardEvent, contentIndex: number) {
     const contentControl = this.contents.at(contentIndex) as FormControl;
-    const textareaElement = this.noteContentElements.toArray()[contentIndex]?.nativeElement;
 
-    if (textareaElement && event.shiftKey && event.key === 'Enter') {
-      event.preventDefault();
-
-      if (this.isInEmptyTextarea(contentIndex)) {
+    // Handling Shift+Enter
+    if (event.key === 'Enter' && event.shiftKey) {
+        event.preventDefault();
+        if (this.isLastTextNode(contentIndex)) {
+            this.moveToNextEmptyTextNode(contentIndex);
+        } else {
+            this.addContentField(contentIndex + 1);
+        }
         return;
-      }
-
-      if (this.isLastTextNode(contentIndex)) {
-        this.moveToNextEmptyTextNode(contentIndex);
-      } else {
-        this.addContentField(contentIndex + 1);
-      }
-    } else if (textareaElement && event.key === 'Backspace') {
+    }
+  
+    const textareaElement = this.noteContentElements.toArray()[contentIndex]?.nativeElement;
+  
+    if (textareaElement && event.key === 'Backspace') {
       if (textareaElement.selectionStart === 0 && contentControl.value.length === 0) {
-        if (this.metadata[contentIndex].childId) {
-          this.deleteContentField(contentIndex);
-          setTimeout(() => this.moveToPreviousTextNode(contentIndex), 0);
-        } else if (contentIndex > 0) {
+        // Case 1: Check if there's an image node before the empty text node
+        if (contentIndex > 0) {
           const previousChildId = this.metadata[contentIndex - 1]?.childId;
           const previousChildType = this.noteChildren.find(child => child.id === previousChildId)?.type;
-
+  
           if (previousChildType === 'image') {
-            this.deleteContentField(contentIndex - 1);
-            setTimeout(() => this.moveToPreviousTextNode(contentIndex - 1), 0);
+            this.deleteContentField(contentIndex - 1);  // Delete the previous image node
+            setTimeout(() => this.moveToPreviousTextNode(contentIndex - 1), 0);  // Move to the previous text node (after deletion)
+            event.preventDefault();
+          } else if (this.metadata[contentIndex].childId) {
+            this.deleteContentField(contentIndex);  // Delete the current empty text node
+            setTimeout(() => this.moveToPreviousTextNode(contentIndex), 0);  // Move to the previous text node
+            event.preventDefault();
           } else {
             this.moveToPreviousTextNode(contentIndex);
           }
+        } 
+        // Case 2: Delete the empty text node if it's the only option left
+        else if (this.metadata[contentIndex].childId) {
+          this.deleteContentField(contentIndex);  // Delete the current empty text node
+          setTimeout(() => this.moveToPreviousTextNode(contentIndex), 0);  // Move to the previous text node
+          event.preventDefault();
+        } 
+        // Case 3: No previous node, just move to the previous text node
+        else {
+          this.moveToPreviousTextNode(contentIndex);
         }
-        event.preventDefault();
-      } else if (textareaElement.selectionStart === 0 && contentIndex > 0) {
+      } 
+      // Case 4: Cursor at start of text node, move to previous text node or delete image node
+      else if (textareaElement.selectionStart === 0 && contentIndex > 0) {
         const previousControl = this.contents.at(contentIndex - 1) as FormControl;
         const previousChildId = this.metadata[contentIndex - 1]?.childId;
-
+  
         if (previousChildId) {
           const previousChildType = this.noteChildren.find(child => child.id === previousChildId)?.type;
-
+  
           if (previousChildType === 'text') {
             setTimeout(() => {
               const previousTextareaElement = this.noteContentElements.toArray()[contentIndex - 1]?.nativeElement;
@@ -187,6 +201,10 @@ export class MainSectionComponent implements OnInit, OnChanges {
                 previousTextareaElement.setSelectionRange(previousControl.value.length, previousControl.value.length);
               }
             }, 0);
+            event.preventDefault();
+          } else if (previousChildType === 'image') {
+            this.deleteContentField(contentIndex - 1);  // Delete the previous image node
+            setTimeout(() => this.moveToPreviousTextNode(contentIndex - 1), 0);  // Move to the previous text node (after deletion)
             event.preventDefault();
           }
         }
@@ -205,7 +223,8 @@ export class MainSectionComponent implements OnInit, OnChanges {
       this.handleOptionClick(contentIndex, this.filteredOptions[this.highlightedIndex]);
     }
   }
-
+  
+  
   isLastTextNode(contentIndex: number): boolean {
     return (
       contentIndex === this.contents.length - 2 &&
@@ -250,9 +269,9 @@ export class MainSectionComponent implements OnInit, OnChanges {
       }
     }
   }
-
   handleInput(event: Event, contentIndex: number) {
     const input = (event.target as HTMLTextAreaElement).value;
+    
     if (input === '/') {
       this.dropdownVisible[contentIndex] = true;
       this.highlightedIndex = 0;
@@ -260,13 +279,17 @@ export class MainSectionComponent implements OnInit, OnChanges {
       this.filteredOptions = this.filteredOptions.filter(option =>
         option.toLowerCase().includes(input.substring(1).toLowerCase())
       );
+  
       if (this.filteredOptions.length === 0) {
         this.dropdownVisible[contentIndex] = false;
+      } else {
+        this.dropdownVisible[contentIndex] = true; // Ensure dropdown stays open with valid options
       }
     } else {
       this.dropdownVisible[contentIndex] = false;
     }
   }
+  
 
   handleOptionClick(contentIndex: number, option: string) {
     if (option === 'image') {
@@ -279,6 +302,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
     }
     this.dropdownVisible[contentIndex] = false;
   }
+  
 
   uploadImage(noteChildId: string) {
     const fileInput = document.createElement('input');
@@ -286,15 +310,15 @@ export class MainSectionComponent implements OnInit, OnChanges {
     fileInput.accept = 'image/*';
     fileInput.onchange = () => {
       const file = fileInput.files ? fileInput.files[0] : null;
-      if (file && noteChildId) {
+      if (file) {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('noteId', this.selectedNoteId!);
-        formData.append('noteChildId', noteChildId);
+        formData.append('noteChildId', noteChildId || ''); // Allow noteChildId to be empty for new entries
   
         this.noteService.uploadImage(formData).subscribe({
           next: (response: any) => {
-            const imagePath = response.imagePath; // Make sure imagePath is correctly assigned
+            const imagePath = response.imagePath;
             this.reloadNoteChildren(this.selectedNoteId!).subscribe(() => {
               setTimeout(() => {
                 const index = this.metadata.findIndex(meta => meta.childId === noteChildId);
@@ -302,7 +326,7 @@ export class MainSectionComponent implements OnInit, OnChanges {
                   const textareaElement = this.noteContentElements.toArray()[index]?.nativeElement;
                   if (textareaElement && textareaElement.parentNode) {
                     const imageElement = document.createElement('img');
-                    imageElement.src = `${this.noteService.getImageUrl(imagePath)}`; // Use imagePath here
+                    imageElement.src = `${this.noteService.getImageUrl(imagePath)}`;
                     imageElement.alt = 'Uploaded Image';
                     imageElement.style.maxWidth = '100%';
   
@@ -318,16 +342,14 @@ export class MainSectionComponent implements OnInit, OnChanges {
     };
     fileInput.click();
   }
-  
-  
-  
-
 
   createImageEntry(contentIndex: number) {
     const noteId = this.selectedNoteId;
     const control = this.contents.at(contentIndex) as FormControl;
-
+  
     if (noteId && control.value.trim() === '') {
+      // Ensure the metadata for this index is null, indicating no existing image
+      this.metadata[contentIndex] = { childId: null };
       this.uploadImage(this.metadata[contentIndex].childId || '');
     }
   }
@@ -451,22 +473,41 @@ export class MainSectionComponent implements OnInit, OnChanges {
   deleteContentField(contentIndex: number) {
     const noteId = this.selectedNoteId;
     const noteChildId = this.metadata[contentIndex].childId;
-
+  
     if (noteId && noteChildId) {
-      this.noteService.deleteTextEntry(noteId, noteChildId).subscribe(() => {
-        this.contents.removeAt(contentIndex);
-        this.metadata.splice(contentIndex, 1);
-        this.originalContent.splice(contentIndex, 1);
-        this.addEmptyContentFieldIfNecessary();
-        this.notesUpdated.emit();
-      }, (error: any) => console.error('Error deleting text entry:', error));
+      const noteChild = this.noteChildren.find(child => child.id === noteChildId);
+      if (noteChild?.type === 'image') {
+        this.noteService.deleteImageEntry(noteId, noteChildId).subscribe(() => {
+          this.reloadNoteChildren(noteId).subscribe(() => {
+            this.resetContentField(contentIndex);
+            this.loadNote(); // Force reloading of the note
+          });
+        }, (error: any) => console.error('Error deleting image entry:', error));
+      } else {
+        this.noteService.deleteTextEntry(noteId, noteChildId).subscribe(() => {
+          this.reloadNoteChildren(noteId).subscribe(() => {
+            this.resetContentField(contentIndex);
+            this.loadNote(); // Force reloading of the note
+          });
+        }, (error: any) => console.error('Error deleting text entry:', error));
+      }
     } else {
-      this.contents.removeAt(contentIndex);
-      this.metadata.splice(contentIndex, 1);
-      this.originalContent.splice(contentIndex, 1);
-      this.addEmptyContentFieldIfNecessary();
+      this.resetContentField(contentIndex);
     }
   }
+  
+  
+  
+  
+  resetContentField(contentIndex: number) {
+    this.contents.removeAt(contentIndex);
+    this.metadata.splice(contentIndex, 1);
+    this.originalContent.splice(contentIndex, 1);
+    this.addEmptyContentFieldIfNecessary();
+    this.notesUpdated.emit();
+  }
+  
+  
 
   addEmptyContentFieldIfNecessary() {
     if (this.contents.length === 0 || this.metadata[this.metadata.length - 1].childId !== null) {
