@@ -94,6 +94,14 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
+    @Transactional(readOnly = true)
+    // UserService.java or wherever you need to access the note
+    public Optional<Note> findNoteByIdAndUserId(String noteId, String userId) {
+        return userNoteRepository.findByNoteIdAndUserId(noteId, userId)
+                                .map(UserNote::getNote);
+    }
+
+
     @Transactional
     public ServiceResponse<String> register(RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {

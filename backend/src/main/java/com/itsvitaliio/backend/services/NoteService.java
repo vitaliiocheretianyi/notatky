@@ -94,6 +94,7 @@ public class NoteService {
         noteRepository.save(note);
     }
 
+
     @Transactional
     public void deleteNote(String userId, DeleteNoteRequest request) {
         String noteId = request.getNoteId();

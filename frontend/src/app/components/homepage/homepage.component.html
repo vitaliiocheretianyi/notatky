@@ -4,6 +4,6 @@
     <button (click)="addNote()">Add Note</button> <!-- Add Note button -->
   </div>
   <div class="main-section-container">
-    <app-main-section [selectedNoteId]="selectedNoteId" [notes]="notes" [noteChildren]="noteChildren" (notesUpdated)="onNotesUpdated()"></app-main-section>
+    <app-main-section [selectedNoteId]="selectedNoteId" [notes]="notes" (notesUpdated)="onNotesUpdated()"></app-main-section>
   </div>
 </div>

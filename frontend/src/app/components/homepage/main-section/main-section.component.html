@@ -1,26 +1,28 @@
 <div>
   <form [formGroup]="noteForm">
     <input formControlName="title" placeholder="Title" />
-    <div formArrayName="contents">
-      <div *ngFor="let content of contents.controls; let i = index" class="content-item">
-        <textarea 
-          [formControlName]="i"
-          (keydown)="handleKeyDown($event, i)"
-          (input)="handleInput($event, i)"  
-          #noteContent
-        ></textarea>
-        <div *ngIf="dropdownVisible[i]" class="dropdown">
-          <div 
-            class="dropdown-item" 
-            *ngFor="let option of filteredOptions; let idx = index" 
-            [class.highlighted]="idx === highlightedIndex" 
-            (click)="handleOptionClick(i, option)"
-          >
-            {{ option }}
-          </div>
-        </div>
-        <button type="button" (click)="deleteContentField(i)">x</button>
-      </div>
-    </div>
   </form>
+
+  <!-- Make noteChildren list draggable -->
+  <div cdkDropList (cdkDropListDropped)="drop($event)" class="note-list">
+    <div *ngFor="let child of noteChildren; let i = index; trackBy: trackByNoteChildId" cdkDrag>
+      <!-- Display text nodes -->
+      <app-text-child
+        *ngIf="child.type === 'text'"
+        [textChild]="child"
+        (textUpdated)="onTextUpdated($event)"
+        (textDeleted)="onTextDeleted($event)"
+      ></app-text-child>
+
+      <!-- Display image nodes -->
+      <app-image-child
+        *ngIf="child.type === 'image'"
+        [imageChild]="child"
+        (imageDeleted)="onImageDeleted($event)"
+      ></app-image-child>
+    </div>
+  </div>
+
+  <!-- Clickable text/label to add a new text node -->
+  <p class="add-content" (click)="addTextNode()">+ Add New Content</p>
 </div>

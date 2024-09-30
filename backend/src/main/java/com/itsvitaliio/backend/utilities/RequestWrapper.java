@@ -19,7 +19,7 @@ public class RequestWrapper extends HttpServletRequestWrapper {
     public RequestWrapper(HttpServletRequest request) throws IOException {
         super(request);
         body = request.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
-        System.out.println("Request Body: " + body);
+        // System.out.println("Request Body: " + body);
     }
 
     @Override

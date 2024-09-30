@@ -1,19 +1,20 @@
 package com.itsvitaliio.backend.services;
 
-import com.itsvitaliio.backend.dto.AddTextEntryRequest;
 import com.itsvitaliio.backend.dto.NoteChildDto;
-import com.itsvitaliio.backend.exceptions.InvalidEntryException;
+import com.itsvitaliio.backend.models.ImageNode;
 import com.itsvitaliio.backend.models.NoteChild;
 import com.itsvitaliio.backend.models.TextNode;
-import com.itsvitaliio.backend.models.ImageNode;
+import com.itsvitaliio.backend.repositories.ImageNodeRepository;
 import com.itsvitaliio.backend.repositories.NoteChildRepository;
 import com.itsvitaliio.backend.repositories.TextNodeRepository;
-import com.itsvitaliio.backend.repositories.ImageNodeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,87 +25,209 @@ public class NoteChildService {
     private final ImageNodeRepository imageNodeRepository;
 
     @Autowired
-    public NoteChildService(NoteChildRepository noteChildRepository, 
-                            TextNodeRepository textNodeRepository, 
+    public NoteChildService(NoteChildRepository noteChildRepository,
+                            TextNodeRepository textNodeRepository,
                             ImageNodeRepository imageNodeRepository) {
         this.noteChildRepository = noteChildRepository;
         this.textNodeRepository = textNodeRepository;
         this.imageNodeRepository = imageNodeRepository;
     }
 
-    @Transactional
-    public void addTextEntry(String userId, AddTextEntryRequest request) {
-        if (noteChildRepository.existsByNoteIdAndPosition(request.getNoteId(), request.getPosition())) {
-            shiftPositionsUpward(request.getNoteId(), request.getPosition());
+    @Transactional(readOnly = true)
+    public List<NoteChildDto> getAllNoteChildren(String noteId) {
+        try {
+            // Fetch note children from the repository
+            List<NoteChild> noteChildren = noteChildRepository.findByNoteId(noteId);
+            
+            // Sort the noteChildren by position before mapping them to DTOs
+            return noteChildren.stream()
+                    .sorted(Comparator.comparingInt(NoteChild::getPosition)) // Sorting by position in ascending order
+                    .map(noteChild -> {
+                        NoteChildDto dto = new NoteChildDto();
+                        dto.setId(noteChild.getId());
+                        dto.setNoteId(noteChild.getNoteId());
+                        dto.setType(noteChild.getType());
+                        dto.setPosition(noteChild.getPosition());
+
+                        // Set the correct child (text or image) in the DTO
+                        if ("text".equalsIgnoreCase(noteChild.getType())) {
+                            textNodeRepository.findById(noteChild.getChildId()).ifPresent(dto::setTextNode);
+                        } else if ("image".equalsIgnoreCase(noteChild.getType())) {
+                            imageNodeRepository.findById(noteChild.getChildId()).ifPresent(dto::setImageNode);
+                        }
+                        return dto;
+                    })
+                    .collect(Collectors.toList()); // Collect sorted results into a list
+        } catch (Exception e) {
+            System.err.println("getAllNoteChildren - Error fetching note children: " + e.getMessage());
+            throw e; // Re-throw the exception if needed for further handling
         }
-
-        TextNode textNode = new TextNode();
-        textNode.setContent(request.getText());
-        textNode = textNodeRepository.save(textNode);
-
-        NoteChild noteChild = new NoteChild();
-        noteChild.setNoteId(request.getNoteId());
-        noteChild.setChildId(textNode.getId());
-        noteChild.setType("text");
-        noteChild.setPosition(request.getPosition());
-        noteChildRepository.save(noteChild);
     }
 
-    public void shiftPositionsUpward(String noteId, int startPosition) {
-        List<NoteChild> noteChildrenToShift = noteChildRepository.findByNoteIdAndPositionGreaterThanEqual(noteId, startPosition);
-
-        for (NoteChild noteChild : noteChildrenToShift) {
-            noteChild.setPosition(noteChild.getPosition() + 1);
-        }
-
-        noteChildRepository.saveAll(noteChildrenToShift);
-    }
 
     @Transactional
-    public List<NoteChildDto> getNoteChildrenByNoteId(String noteId) {
-        List<NoteChild> noteChildren = noteChildRepository.findByNoteId(noteId);
+    public List<NoteChildDto> syncNoteChildren(String noteId, List<NoteChildDto> incomingDtos) {
+        List<NoteChildDto> updatedDtos = incomingDtos.stream()
+            .peek(dto -> {
+                // Ensure each incoming DTO has the correct NoteId
+                if (dto.getNoteId() == null || dto.getNoteId().isEmpty()) {
+                    dto.setNoteId(noteId);
+                }
 
-        return noteChildren.stream()
-                .sorted((nc1, nc2) -> Integer.compare(nc1.getPosition(), nc2.getPosition()))
-                .map(noteChild -> {
-                    NoteChildDto dto = new NoteChildDto();
-                    dto.setId(noteChild.getId());
-                    dto.setType(noteChild.getType());
-                    dto.setPosition(noteChild.getPosition());
+                // Log any DTO that still lacks a NoteId for further debugging
+                if (dto.getNoteId() == null || dto.getNoteId().isEmpty()) {
+                    System.err.println("syncNoteChildren - Incoming DTO with missing NoteId: " + dto);
+                }
+            }).collect(Collectors.toList());
 
-                    if ("text".equals(noteChild.getType())) {
-                        TextNode textNode = textNodeRepository.findById(noteChild.getChildId())
-                                .orElseThrow(() -> new IllegalArgumentException("Text node not found"));
-                        dto.setTextNode(textNode);
-                    } else if ("image".equals(noteChild.getType())) {
-                        ImageNode imageNode = imageNodeRepository.findById(noteChild.getChildId())
-                                .orElseThrow(() -> new IllegalArgumentException("Image node not found"));
-                        dto.setImageNode(imageNode);
+        try {
+            List<NoteChild> existingNoteChildren = noteChildRepository.findByNoteId(noteId);
+            Map<String, NoteChild> existingMap = existingNoteChildren.stream()
+                    .collect(Collectors.toMap(NoteChild::getId, child -> child));
+
+            // Iterate through the incoming DTOs
+            for (NoteChildDto dto : updatedDtos) {
+                NoteChild existingChild = existingMap.get(dto.getId());
+
+                if (existingChild == null) {
+                    System.out.println("Creating a new note child: " + dto.toString());
+                    // Create new note child if not found in existing ones
+                    handleCreateOperation(dto);
+                } else {
+                    // Update existing note child and ensure position updates are handled
+                    System.out.println("Updating existing note child: " + dto.getId());
+                    handleUpdateOperation(dto, existingChild);
+                    existingMap.remove(dto.getId());
+                }
+            }
+
+            // Handle deletion of any remaining items that were not included in the update
+            existingMap.values().forEach(this::handleDeleteOperation);
+        } catch (Exception e) {
+            System.err.println("syncNoteChildren - Error syncing note children: " + e.getMessage());
+            throw e;
+        }
+
+        // Return the updated list of DTOs back to the frontend
+        return updatedDtos;
+    }
+
+    private void handleUpdateOperation(NoteChildDto dto, NoteChild existingChild) {
+        try {
+            // Always update the position
+            existingChild.setPosition(dto.getPosition());
+
+            // Save the updated NoteChild to persist the position change
+            noteChildRepository.save(existingChild);
+
+            // Update text nodes if the type is text
+            if ("text".equalsIgnoreCase(dto.getType())) {
+                textNodeRepository.findById(existingChild.getChildId()).ifPresent(textNode -> {
+                    if (!textNode.getContent().equals(dto.getTextNode().getContent())) {
+                        textNode.setContent(dto.getTextNode().getContent());
+                        textNodeRepository.save(textNode);
                     }
-
-                    return dto;
-                }).collect(Collectors.toList());
+                });
+            } 
+            // Update image nodes if the type is image
+            else if ("image".equalsIgnoreCase(dto.getType())) {
+                imageNodeRepository.findById(existingChild.getChildId()).ifPresent(imageNode -> {
+                    if (!imageNode.getImagePath().equals(dto.getImageNode().getImagePath())) {
+                        imageNode.setImagePath(dto.getImageNode().getImagePath());
+                        imageNodeRepository.save(imageNode);
+                    }
+                });
+            }
+        } catch (Exception e) {
+            System.err.println("handleUpdateOperation - Error updating note child: " + e.getMessage());
+            throw e;
+        }
     }
+
 
     @Transactional
-    public void deleteNoteChild(String noteId, String childId) {
-        NoteChild noteChildToDelete = noteChildRepository.findById(childId)
-                .orElseThrow(() -> new InvalidEntryException("Note child not found"));
+    private void handleCreateOperation(NoteChildDto dto) {
+        try {
+            // Generate IDs if they are missing
+            String generatedId = dto.getId() != null ? dto.getId() : UUID.randomUUID().toString();
+            dto.setId(generatedId);
 
-        int deletedPosition = noteChildToDelete.getPosition();
+            String childId = null;
+            String type = dto.getType(); // Should be "text" or "image"
 
-        noteChildRepository.delete(noteChildToDelete);
+            // Handle TextNode creation
+            if ("text".equalsIgnoreCase(type) && dto.getTextNode() != null) {
+                String textNodeId = dto.getTextNode().getId() != null
+                        ? dto.getTextNode().getId()
+                        : UUID.randomUUID().toString();
 
-        updatePositionsAfterDeletion(noteId, deletedPosition);
+                TextNode textNode = new TextNode(
+                        textNodeId,
+                        dto.getTextNode().getContent() != null ? dto.getTextNode().getContent() : ""
+                );
+                textNodeRepository.save(textNode);
+
+                // Set the childId to the generated textNodeId for the NoteChild
+                childId = textNodeId;
+
+                // Update the DTO with the correct TextNode ID
+                dto.getTextNode().setId(textNodeId);
+            }
+
+            // Handle ImageNode creation
+            else if ("image".equalsIgnoreCase(type) && dto.getImageNode() != null) {
+                String imageNodeId = dto.getImageNode().getId() != null
+                        ? dto.getImageNode().getId()
+                        : UUID.randomUUID().toString();
+
+                ImageNode imageNode = new ImageNode(
+                        imageNodeId,
+                        dto.getImageNode().getImagePath() != null ? dto.getImageNode().getImagePath() : ""
+                );
+                imageNodeRepository.save(imageNode);
+
+                // Set the childId to the generated imageNodeId for the NoteChild
+                childId = imageNodeId;
+
+                // Update the DTO with the correct ImageNode ID
+                dto.getImageNode().setId(imageNodeId);
+            }
+
+            // Ensure that the NoteChild has the correct type and childId set
+            if (childId != null && type != null) {
+                // Create and save the NoteChild with the correct type and childId
+                NoteChild noteChild = new NoteChild(
+                        UUID.randomUUID().toString(),
+                        dto.getNoteId(),
+                        childId, // Set the childId to the generated TextNode or ImageNode ID
+                        type, // Set the type correctly (text or image)
+                        dto.getPosition()
+                );
+                noteChildRepository.save(noteChild);
+
+                // Update the DTO with the correct NoteChild ID
+                dto.setId(noteChild.getId());
+            } else {
+                throw new IllegalArgumentException("Failed to create NoteChild: missing childId or type");
+            }
+
+        } catch (Exception e) {
+            System.err.println("handleCreateOperation - Error creating note child: " + e.getMessage());
+            throw e;
+        }
     }
 
-    private void updatePositionsAfterDeletion(String noteId, int deletedPosition) {
-        List<NoteChild> noteChildrenToUpdate = noteChildRepository.findByNoteIdAndPositionGreaterThanEqual(noteId, deletedPosition);
-
-        for (NoteChild noteChild : noteChildrenToUpdate) {
-            noteChild.setPosition(noteChild.getPosition() - 1);
+    private void handleDeleteOperation(NoteChild existingChild) {
+        try {
+            noteChildRepository.delete(existingChild);
+            if ("text".equalsIgnoreCase(existingChild.getType())) {
+                textNodeRepository.deleteById(existingChild.getChildId());
+            } else if ("image".equalsIgnoreCase(existingChild.getType())) {
+                imageNodeRepository.deleteById(existingChild.getChildId());
+            }
+        } catch (Exception e) {
+            System.err.println("handleDeleteOperation - Error deleting note child: " + e.getMessage());
+            throw e;
         }
-
-        noteChildRepository.saveAll(noteChildrenToUpdate);
     }
 }

@@ -31,6 +31,4 @@ public class NoteChild {
     public void setNoteId(String noteId) {
         this.noteId = noteId;
     }
-
-    // Other getters and setters...
 }

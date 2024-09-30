@@ -1,16 +1,11 @@
 import { Injectable } from '@angular/core';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { from, Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
-
-interface ImageUploadRequest {
-  noteId: string;
-  noteChildId: string;
-  userId: string;
-}
+import { catchError, map } from 'rxjs/operators';
+import { Note, NoteChild } from '../models/note.model';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class NoteService {
   private apiUrl = 'http://localhost:8080/notatky';
@@ -21,7 +16,7 @@ export class NoteService {
     const token = this.getToken();
     return {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      Authorization: `Bearer ${token}`,
     };
   }
 
@@ -39,103 +34,69 @@ export class NoteService {
     return throwError(error);
   }
 
+  private handleError(error: any): Observable<never> {
+    let errorMessage: string =
+      error.response?.data?.message || error.message || 'An unknown error occurred!';
+    console.error(errorMessage);
+    return throwError(errorMessage);
+  }
+
+  // 1. Method to Create a New Note
   createNote(title: string): Observable<any> {
     const url = `${this.apiUrl}/create`;
     const headers = this.getHeaders();
     const lastInteractedWith = new Date().toISOString();
     return from(axios.post(url, { title, lastInteractedWith }, { headers })).pipe(
-      catchError(error => this.handleTokenExpiration(error)),
-      catchError(error => this.handleError(error))
+      catchError((error: any) => this.handleTokenExpiration(error)),
+      catchError((error: any) => this.handleError(error))
     );
   }
 
+  editNoteTitle(noteId: string, title: string): Observable<Note> {
+    console.log("NEW NOTE TITLE: " + title)
+    const url = `${this.apiUrl}/edit`;
+    const headers = this.getHeaders();
+    const payload = {
+      noteId,
+      title,
+      lastInteractedWith: new Date().toISOString(),
+    };
+
+    // Perform the request using axios and map the response to the correct Note type
+    return from(axios.put(url, payload, { headers })).pipe(
+      map((response: AxiosResponse<any>) => {
+        // Assuming response.data contains the note object; adjust if necessary
+        const noteData = response.data;
+        // Transform the response data into a Note object
+        const note: Note = {
+          id: noteData.id,
+          title: noteData.title,
+          contents: noteData.contents || [], // Default to an empty array if not provided
+          lastInteractedWith: noteData.lastInteractedWith || new Date().toISOString(),
+        };
+        return note;
+      }),
+      catchError((error: any) => this.handleTokenExpiration(error)),
+      catchError((error: any) => this.handleError(error))
+    );
+  }
+  // 2. Method to Fetch All Notes
   getAllNotes(): Observable<any> {
     const url = `${this.apiUrl}/notes`;
     const headers = this.getHeaders();
     return from(axios.get(url, { headers })).pipe(
-      catchError(error => this.handleTokenExpiration(error)),
-      catchError(error => this.handleError(error))
+      catchError((error: any) => this.handleTokenExpiration(error)),
+      catchError((error: any) => this.handleError(error))
     );
   }
 
-  getNoteChildren(noteId: string): Observable<any> {
-    const url = `${this.apiUrl}/note/${noteId}/children`;
-    const headers = this.getHeaders();
-    return from(axios.get(url, { headers })).pipe(
-      catchError(error => this.handleTokenExpiration(error)),
-      catchError(error => this.handleError(error))
-    );
-  }
-
-  editNoteTitle(noteId: string, title: string): Observable<any> {
-    const url = `${this.apiUrl}/edit`;
-    const headers = this.getHeaders();
-    const lastInteractedWith = new Date().toISOString();
-    return from(axios.put(url, { noteId, title, lastInteractedWith }, { headers })).pipe(
-      catchError(error => this.handleTokenExpiration(error)),
-      catchError(error => this.handleError(error))
-    );
-  }
-
+  // 3. Method to Delete a Note
   deleteNote(noteId: string): Observable<any> {
     const url = `${this.apiUrl}/delete`;
     const headers = this.getHeaders();
     return from(axios.delete(url, { headers, data: { noteId } })).pipe(
-      catchError(error => this.handleTokenExpiration(error)),
-      catchError(error => this.handleError(error))
+      catchError((error: any) => this.handleTokenExpiration(error)),
+      catchError((error: any) => this.handleError(error))
     );
-  }
-
-  editTextEntry(noteId: string, textEntryId: string, newText: string, position: number): Observable<any> {
-    const url = `${this.apiUrl}/text/edit`;
-    const headers = this.getHeaders();
-    return from(axios.put(url, { noteId, textEntryId, newText, position }, { headers })).pipe(
-      catchError(error => this.handleError(error))
-    );
-  }
-
-  createTextEntry(noteId: string, text: string, position: number): Observable<any> {
-    const url = `${this.apiUrl}/text/create`;
-    const headers = this.getHeaders();
-    return from(axios.post(url, { noteId, text, position }, { headers })).pipe(
-      catchError(error => this.handleError(error))
-    );
-  }
-
-  deleteTextEntry(noteId: string, textEntryId: string): Observable<any> {
-    const url = `${this.apiUrl}/text/delete`;
-    const headers = this.getHeaders();
-    return from(axios.delete(url, { headers, data: { noteId, textEntryId } })).pipe(
-      catchError(error => this.handleTokenExpiration(error)),
-      catchError(error => this.handleError(error))
-    );
-  }
-
-  uploadImage(formData: FormData): Observable<any> {
-    const url = `${this.apiUrl}/image/create`;
-    const headers = this.getHeaders(); // This might need to handle multipart/form-data correctly
-
-    return from(axios.post(url, formData, { headers: { ...headers, 'Content-Type': 'multipart/form-data' } })).pipe(
-        catchError(error => this.handleError(error))
-    );
-}
-
-deleteImageEntry(noteId: string, imageEntryId: string): Observable<any> {
-  const url = `${this.apiUrl}/image/delete`;
-  const headers = this.getHeaders();
-  return from(axios.delete(url, { headers, data: { noteId, imageEntryId } })).pipe(
-    catchError(error => this.handleTokenExpiration(error)),
-    catchError(error => this.handleError(error))
-  );
-}
-
-  getImageUrl(filename: string): string {
-    return `${this.apiUrl}/${filename}`;
-  }
-
-  private handleError(error: any): Observable<never> {
-    let errorMessage: string = error.response?.data?.message || error.message || 'An unknown error occurred!';
-    console.error(errorMessage);
-    return throwError(errorMessage);
   }
 }

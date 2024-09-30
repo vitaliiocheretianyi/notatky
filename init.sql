@@ -37,22 +37,16 @@ CREATE TABLE IF NOT EXISTS image_nodes (
     image_path VARCHAR(255) NOT NULL
 );
 
--- NoteChild relationship table
+-- NoteChild relationship table without polymorphic constraints
 CREATE TABLE IF NOT EXISTS note_children (
     id VARCHAR(255) PRIMARY KEY,
     note_id VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL,
+    type ENUM('text', 'image') NOT NULL,  -- Enum to specify type clearly
     child_id VARCHAR(255) NOT NULL,
-    position INT NOT NULL,  // Rename column to position
-    FOREIGN KEY (note_id) REFERENCES notes(id),
-    FOREIGN KEY (child_id) REFERENCES text_nodes(id) ON DELETE CASCADE,
-    FOREIGN KEY (child_id) REFERENCES image_nodes(id) ON DELETE CASCADE
+    position INT NOT NULL,
+    FOREIGN KEY (note_id) REFERENCES notes(id)
 );
 
-
--- Additional constraints to enforce polymorphic relationships in NoteChild
-ALTER TABLE note_children
-ADD CONSTRAINT fk_textnode FOREIGN KEY (child_id)
-REFERENCES text_nodes(id) ON DELETE CASCADE,
-ADD CONSTRAINT fk_imagenode FOREIGN KEY (child_id)
-REFERENCES image_nodes(id) ON DELETE CASCADE;
+-- Create additional indexes or triggers for validation (pseudo-code)
+-- Ensure validation is handled at the application layer to verify child_id
+-- corresponds to the type specified in the 'type' column

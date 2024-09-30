@@ -9,7 +9,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class NoteChildDto {
     private String id;
-    private String type;
+    private String noteId;
+    private String type;  // 'text' or 'image'
     private TextNode textNode;
     private ImageNode imageNode;
     private Integer position;
