@@ -1,9 +1,10 @@
 import { Routes } from '@angular/router';
-import { AuthComponent } from './components/auth/auth.component';
 import { HomepageComponent } from './components/homepage/homepage.component';
+import { LoginComponent } from './components/auth/login/login.component';
+import { AuthGuard } from './services/auth.guard';  // Import the AuthGuard
 
 export const routes: Routes = [
-  { path: '', component: AuthComponent },
-  { path: 'home', component: HomepageComponent },
-  // other routes
+  { path: 'login', component: LoginComponent },  // Public route
+  { path: 'home', component: HomepageComponent, canActivate: [AuthGuard] },  // Protected route
+  { path: '', redirectTo: '/login', pathMatch: 'full' }  // Redirect to login by default
 ];

@@ -1,5 +1,9 @@
-<!-- text-child.component.html -->
 <div class="text-child">
-    <textarea [formControl]="getFormControl('content')" rows="3"></textarea>
+  <!-- Text area to input text -->
+  <textarea #textareaElement [formControl]="getFormControl('content')" rows="3"></textarea>
+
+  <!-- Dropdown for suggesting image upload when '/' is typed -->
+  <div *ngIf="showDropdown" class="dropdown">
+    <button (click)="triggerFileUpload()">Upload Image</button>
   </div>
-  
+</div>

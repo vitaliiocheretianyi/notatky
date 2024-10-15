@@ -1,7 +1,10 @@
 <div class="header">
-  <div *ngIf="notes.length > 0">
-    <app-note-list (noteSelected)="selectNote($event)" [notes]="notes"></app-note-list>
-  </div>
-  <button (click)="addNote()">Add Note</button>
-  <app-settings></app-settings>
+  <app-note-list 
+    (noteSelected)="selectNote($event)" 
+    (noteDeleted)="deleteNote($event)" 
+    [notes]="notes">
+  </app-note-list>
+
+  <!-- Add SettingsComponent inside HeaderComponent -->
+  <app-settings (actionSelected)="onActionSelected($event)"></app-settings>
 </div>

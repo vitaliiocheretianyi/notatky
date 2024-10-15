@@ -1,9 +1,20 @@
 <div class="homepage-container">
-  <div class="note-list-container">
-    <app-note-list [notes]="notes" (noteSelected)="onNoteSelected($event)" (noteDeleted)="onNoteDeleted($event)"></app-note-list>
-    <button (click)="addNote()">Add Note</button> <!-- Add Note button -->
+  <div class="header-container">
+    <app-header [notes]="notes" (actionSelected)="handleActionSelected($event)"></app-header> <!-- Header with settings -->
   </div>
+
   <div class="main-section-container">
-    <app-main-section [selectedNoteId]="selectedNoteId" [notes]="notes" (notesUpdated)="onNotesUpdated()"></app-main-section>
+    <ng-container *ngIf="currentView === 'main'">
+      <app-main-section [selectedNoteId]="selectedNoteId" [notes]="notes" (notesUpdated)="onNotesUpdated()"></app-main-section>
+    </ng-container>
+    <ng-container *ngIf="currentView === 'change-username'">
+      <app-change-username></app-change-username>
+    </ng-container>
+    <ng-container *ngIf="currentView === 'change-email'">
+      <app-change-email></app-change-email>
+    </ng-container>
+    <ng-container *ngIf="currentView === 'change-password'">
+      <app-change-password></app-change-password>
+    </ng-container>
   </div>
 </div>

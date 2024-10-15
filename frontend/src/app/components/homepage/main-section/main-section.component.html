@@ -1,28 +1,36 @@
 <div>
+  <!-- Form to handle the note title -->
   <form [formGroup]="noteForm">
     <input formControlName="title" placeholder="Title" />
   </form>
 
-  <!-- Make noteChildren list draggable -->
-  <div cdkDropList (cdkDropListDropped)="drop($event)" class="note-list">
-    <div *ngFor="let child of noteChildren; let i = index; trackBy: trackByNoteChildId" cdkDrag>
-      <!-- Display text nodes -->
-      <app-text-child
+    <!-- Draggable list for note children -->
+    <div cdkDropList (cdkDropListDropped)="drop($event)" class="note-list">
+      <!-- main-section.component.html -->
+      <div *ngFor="let child of noteChildren; let i = index; trackBy: trackByNoteChildId" cdkDrag>
+        <!-- Ensure (triggerImageUpload) event is bound -->
+        <app-text-child
         *ngIf="child.type === 'text'"
         [textChild]="child"
         (textUpdated)="onTextUpdated($event)"
         (textDeleted)="onTextDeleted($event)"
-      ></app-text-child>
+        (createNewTextChild)="addOrInsertTextChild(i)"
+        (requestFocusOrDeletePreviousNode)="handleRequestFocusOrDeletePreviousNode(i)"
+        (triggerImageUpload)="onImageUpload($event.file, $event.textChildId)"
+        ></app-text-child>
 
-      <!-- Display image nodes -->
-      <app-image-child
-        *ngIf="child.type === 'image'"
-        [imageChild]="child"
-        (imageDeleted)="onImageDeleted($event)"
-      ></app-image-child>
+
+        <!-- Display image nodes -->
+        <app-image-child
+          *ngIf="child.type === 'image'"
+          [imageChild]="child"
+          (imageDeleted)="onImageDeleted($event)"
+        ></app-image-child>
+      </div>
+
     </div>
+  
+    <!-- Add new text node button -->
+    <p class="add-content" (click)="addOrInsertTextChild()">+ Add New Content</p>
   </div>
-
-  <!-- Clickable text/label to add a new text node -->
-  <p class="add-content" (click)="addTextNode()">+ Add New Content</p>
-</div>
+  

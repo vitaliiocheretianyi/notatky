@@ -4,3 +4,15 @@ export interface UserDTO {
     password: string;
   }
   
+  export interface ChangeUsernameRequest {
+    newUsername: string;
+  }
+  
+  export interface ChangeEmailRequest {
+    newEmail: string;
+  }
+  
+  export interface ChangePasswordRequest {
+    newPassword: string;
+  }
+  

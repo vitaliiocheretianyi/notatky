@@ -1,4 +1,4 @@
-// note-child.service.ts
+// note-child.service.ts (Angular Service)
 import { Injectable } from '@angular/core';
 import axios, { AxiosResponse } from 'axios';
 import { from, Observable, throwError } from 'rxjs';
@@ -16,50 +16,51 @@ export class NoteChildService {
   private getHeaders() {
     const token = this.getToken();
     return {
-      'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     };
   }
 
   private getToken(): string | null {
-    if (typeof localStorage !== 'undefined') {
-      return localStorage.getItem('jwtToken');
-    }
-    return null;
-  }
-
-  private handleTokenExpiration(error: any): Observable<never> {
-    if (error.response && error.response.status === 401) {
-      console.error('Token expired or unauthorized');
-    }
-    return throwError(error);
+    return typeof localStorage !== 'undefined' ? localStorage.getItem('jwtToken') : null;
   }
 
   private handleError(error: any): Observable<never> {
-    let errorMessage: string =
+    const errorMessage: string =
       error.response?.data?.message || error.message || 'An unknown error occurred!';
     console.error(errorMessage);
     return throwError(errorMessage);
   }
 
-  // Method to fetch all note children for a specific note
+  uploadImage(noteId: string, noteChildId: string, formData: FormData): Promise<NoteChild[]> {
+    return axios
+      .post(`${this.apiUrl}/upload/${noteId}/${noteChildId}`, formData, {
+        headers: {
+          ...this.getHeaders(),
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      .then((response: AxiosResponse<NoteChild[]>) => response.data)
+      .catch((error: any) => {
+        console.error('Error uploading image:', error);
+        throw error;
+      });
+  }
+  
+
   getAllNoteChildren(noteId: string): Observable<NoteChild[]> {
     const url = `${this.apiUrl}/all/${noteId}`;
     const headers = this.getHeaders();
     return from(axios.get(url, { headers })).pipe(
       map((response: AxiosResponse<NoteChild[]>) => response.data),
-      catchError((error: any) => this.handleTokenExpiration(error)),
       catchError((error: any) => this.handleError(error))
     );
   }
 
-  // Method to sync note children (create, update, delete)
   syncNoteChildren(noteId: string, noteChildren: NoteChild[]): Observable<any> {
     const url = `${this.apiUrl}/sync/${noteId}`;
     const headers = this.getHeaders();
     const payload = { noteChildren };
     return from(axios.post(url, payload, { headers })).pipe(
-      catchError((error: any) => this.handleTokenExpiration(error)),
       catchError((error: any) => this.handleError(error))
     );
   }

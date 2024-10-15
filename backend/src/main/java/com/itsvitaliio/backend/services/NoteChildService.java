@@ -8,9 +8,15 @@ import com.itsvitaliio.backend.repositories.ImageNodeRepository;
 import com.itsvitaliio.backend.repositories.NoteChildRepository;
 import com.itsvitaliio.backend.repositories.TextNodeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +26,9 @@ import java.util.stream.Collectors;
 @Service
 public class NoteChildService {
 
+
+    @Value("${image.upload.dir}") // Inject the directory path from application.properties
+    private String imageUploadDir;
     private final NoteChildRepository noteChildRepository;
     private final TextNodeRepository textNodeRepository;
     private final ImageNodeRepository imageNodeRepository;
@@ -230,4 +239,50 @@ public class NoteChildService {
             throw e;
         }
     }
+
+    @Transactional
+    public List<NoteChildDto> uploadImage(String noteId, String noteChildId, MultipartFile imageFile) {
+        try {
+            // Ensure the directory exists, create it if it doesn't
+            Path directoryPath = Paths.get(imageUploadDir);
+            if (!Files.exists(directoryPath)) {
+                Files.createDirectories(directoryPath);
+            }
+
+            // Generate a unique filename or use the file's original name
+            String imageFileName = UUID.randomUUID().toString() + "_" + imageFile.getOriginalFilename();
+
+            // Save the image to the filesystem
+            Path imagePath = directoryPath.resolve(imageFileName);
+            Files.write(imagePath, imageFile.getBytes());
+
+            // Find the existing NoteChild by ID
+            NoteChild noteChild = noteChildRepository.findById(noteChildId)
+                    .orElseThrow(() -> new RuntimeException("NoteChild not found"));
+
+            // If the NoteChild is a text node, remove the associated TextNode
+            if ("text".equalsIgnoreCase(noteChild.getType())) {
+                textNodeRepository.deleteById(noteChild.getChildId());
+            }
+
+            // Create a new ImageNode and save it in the database
+            ImageNode imageNode = new ImageNode(UUID.randomUUID().toString(), imagePath.toString());
+            imageNodeRepository.save(imageNode);
+
+            // Update the NoteChild to point to the new ImageNode
+            noteChild.setType("image");
+            noteChild.setChildId(imageNode.getId());
+            noteChildRepository.save(noteChild);
+
+            // Return the updated list of note children
+            return getAllNoteChildren(noteId);
+        } catch (IOException e) {
+            System.err.println("\nERROR handling image upload: " + e.getMessage());
+            throw new RuntimeException(e);
+        } catch (Exception e) {
+            System.err.println("\nERROR handling image upload: " + e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
 }

@@ -1,6 +1,5 @@
-<!-- image-child.component.html -->
 <div class="image-child">
-    <img [src]="imageChild.imageNode?.imagePath" alt="Note Image">
-    <button (click)="deleteImageChild()">Delete</button>
-  </div>
-  
+  <!-- Adjust the src to point to the correct backend URL -->
+  <img [src]="getImageUrl(imageChild.imageNode?.id)" alt="Note Image">
+  <button (click)="deleteImage()">Delete</button>
+</div>

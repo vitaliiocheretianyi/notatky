@@ -1,0 +1,12 @@
+<div class="change-email-container">
+    <form [formGroup]="changeEmailForm" (ngSubmit)="onSubmit()">
+      <label for="newEmail">New Email:</label>
+      <input id="newEmail" formControlName="newEmail" type="email" />
+      
+      <button type="submit" [disabled]="!changeEmailForm.valid">Change Email</button>
+  
+      <div *ngIf="successMessage" class="success-message">{{ successMessage }}</div>
+      <div *ngIf="errorMessage" class="error-message">{{ errorMessage }}</div>
+    </form>
+  </div>
+  

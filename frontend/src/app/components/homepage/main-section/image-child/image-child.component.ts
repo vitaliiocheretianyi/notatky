@@ -1,25 +1,31 @@
-// image-child.component.ts
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { NoteChild } from '../../../../models/note.model';
 
 @Component({
   selector: 'app-image-child',
   standalone: true,
-  imports: [CommonModule],
   templateUrl: './image-child.component.html',
-  styleUrls: ['./image-child.component.css']
+  styleUrls: ['./image-child.component.css'],
 })
 export class ImageChildComponent {
   @Input() imageChild!: NoteChild;
   @Output() imageDeleted = new EventEmitter<string>();
 
-  deleteImageChild() {
-    // Ensure that id is not null before emitting; use non-null assertion
-    if (this.imageChild.id) {
+  // Your backend API URL
+  private backendUrl = 'http://localhost:8080/notatky/note-children/images';
+
+  // Generate the image URL
+  getImageUrl(imageNodeId: string | null | undefined): string {
+    if (!imageNodeId) {
+      return ''; // Return an empty string or a placeholder image path if the imageNodeId is null or undefined
+    }
+    return `${this.backendUrl}/${imageNodeId}`;
+  }
+  
+
+  deleteImage() {
+    if (this.imageChild.id != null) {
       this.imageDeleted.emit(this.imageChild.id);
-    } else {
-      console.error('Cannot delete an image with null id.');
     }
   }
 }
