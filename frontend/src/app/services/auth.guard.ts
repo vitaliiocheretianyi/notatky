@@ -10,8 +10,8 @@ export class AuthGuard implements CanActivate {
   constructor(private authService: AuthService, private router: Router) {}
 
   canActivate(): boolean {
-    const token = this.authService.getToken();
-
+    const token = this.authService.getToken();  // Fetches from memory or localStorage
+  
     if (token && this.authService.isTokenValid(token)) {
       return true;  // Allow access if the token is valid
     } else {
@@ -19,4 +19,5 @@ export class AuthGuard implements CanActivate {
       return false;  // Deny access
     }
   }
+  
 }

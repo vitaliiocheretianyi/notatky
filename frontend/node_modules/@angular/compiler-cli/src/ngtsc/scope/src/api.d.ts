@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 import { SchemaMetadata } from '@angular/compiler';
 import { Reexport, Reference } from '../../imports';
@@ -58,6 +58,7 @@ export interface LocalModuleScope extends ExportScope {
 export interface StandaloneScope {
     kind: ComponentScopeKind.Standalone;
     dependencies: Array<DirectiveMeta | PipeMeta | NgModuleMeta>;
+    deferredDependencies: Array<DirectiveMeta | PipeMeta>;
     component: ClassDeclaration;
     schemas: SchemaMetadata[];
     isPoisoned: boolean;

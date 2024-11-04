@@ -7,9 +7,9 @@ export interface Schema {
      */
     assets?: AssetPattern[];
     /**
-     * Override which browsers tests are run against.
+     * Override which browsers tests are run against. Set to `false` to not use any browser.
      */
-    browsers?: string;
+    browsers?: Browsers;
     /**
      * Output a code coverage report.
      */
@@ -74,7 +74,7 @@ export interface Schema {
     scripts?: ScriptElement[];
     /**
      * Output source maps for scripts and styles. For more information, see
-     * https://angular.io/guide/workspace-config#source-map-configuration.
+     * https://angular.dev/reference/configs/workspace-config#source-map-configuration.
      */
     sourceMap?: SourceMapUnion;
     /**
@@ -115,8 +115,12 @@ export interface AssetPatternClass {
     /**
      * Absolute path within the output.
      */
-    output: string;
+    output?: string;
 }
+/**
+ * Override which browsers tests are run against. Set to `false` to not use any browser.
+ */
+export type Browsers = boolean | string;
 export interface FileReplacement {
     replace?: string;
     replaceWith?: string;
@@ -153,7 +157,7 @@ export interface ScriptClass {
 }
 /**
  * Output source maps for scripts and styles. For more information, see
- * https://angular.io/guide/workspace-config#source-map-configuration.
+ * https://angular.dev/reference/configs/workspace-config#source-map-configuration.
  */
 export type SourceMapUnion = boolean | SourceMapClass;
 export interface SourceMapClass {

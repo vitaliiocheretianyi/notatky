@@ -6,6 +6,7 @@ import { LoginComponent } from './login/login.component';
 import { RegisterComponent } from './register/register.component';
 import { AuthService } from '../../services/auth.service';
 import { UserDTO } from '../../models/user.dto';
+import { Console } from 'console';
 
 @Component({
   selector: 'app-auth',
@@ -22,8 +23,9 @@ export class AuthComponent {
   constructor(private router: Router, private authService: AuthService) {}
 
   toggleMode() {
-    this.isLoginMode = !this.isLoginMode;
-    this.error = null;
+    this.isLoginMode = !this.isLoginMode;  // Toggle between login and register
+    this.error = null;  // Reset the error message when switching modes
+    console.log("Switching authentication mode")
   }
 
   onLogin(event: { identifier: string; password: string }) {

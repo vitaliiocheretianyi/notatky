@@ -214,13 +214,28 @@ export class MainSectionComponent implements OnInit, AfterViewInit {
   }
 
   updateNoteTitle(newTitle: string) {
-    // Assuming update logic with the service
-    if (this.selectedNoteId) {
-      // Trigger backend update and notify parent component (HomepageComponent)
-      this.notesUpdated.emit(); // Notify HomepageComponent to reload notes in header
+    if (!this.selectedNoteId) {
+      return;
     }
+  
+    // Call the service to update the note title in the backend
+    this.noteService.editNoteTitle(this.selectedNoteId, newTitle).subscribe({
+      next: (updatedNote: Note) => {
+        // Find the note in the local notes array and update its title
+        const noteIndex = this.notes.findIndex(note => note.id === this.selectedNoteId);
+        if (noteIndex !== -1) {
+          this.notes[noteIndex].title = updatedNote.title;  // Update local note title
+          this.notesUpdated.emit();  // Notify parent component about the update
+        }
+      },
+      error: (err) => {
+        console.error('Error updating note title:', err);
+      }
+    });
   }
+  
 
+  
   onTextUpdated(updatedChild: NoteChild) {
     const index = this.noteChildren.findIndex((child) => child.id === updatedChild.id);
     if (index !== -1) {

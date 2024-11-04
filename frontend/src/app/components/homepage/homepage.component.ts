@@ -126,7 +126,7 @@ export class HomepageComponent implements OnInit, AfterViewInit {
         next: () => {
           alert('Account deleted successfully');
           // Redirect the user to the login page or another page after deletion
-          window.location.href = '/login';  // You can change this to your app's flow
+          window.location.href = '/';  // You can change this to your app's flow
         },
         error: (err) => {
           console.error('Error deleting account:', err);

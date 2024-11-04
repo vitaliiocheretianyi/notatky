@@ -1,8 +1,11 @@
 <div>
   <!-- Form to handle the note title -->
-  <form [formGroup]="noteForm">
-    <input formControlName="title" placeholder="Title" />
-  </form>
+  <div>
+    <form [formGroup]="noteForm">
+      <input formControlName="title" placeholder="Title" />
+    </form>
+  </div>
+
 
     <!-- Draggable list for note children -->
     <div cdkDropList (cdkDropListDropped)="drop($event)" class="note-list">

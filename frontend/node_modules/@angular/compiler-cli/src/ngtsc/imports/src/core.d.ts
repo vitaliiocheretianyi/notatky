@@ -3,19 +3,12 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 /**
  * Rewrites imports of symbols being written into generated code.
  */
 export interface ImportRewriter {
-    /**
-     * Should the given symbol be imported at all?
-     *
-     * If `true`, the symbol should be imported from the given specifier. If `false`, the symbol
-     * should be referenced directly, without an import.
-     */
-    shouldImportSymbol(symbol: string, specifier: string): boolean;
     /**
      * Optionally rewrite a reference to an imported symbol, changing either the binding prefix or the
      * symbol name itself.
@@ -30,7 +23,6 @@ export interface ImportRewriter {
  * `ImportRewriter` that does no rewriting.
  */
 export declare class NoopImportRewriter implements ImportRewriter {
-    shouldImportSymbol(symbol: string, specifier: string): boolean;
     rewriteSymbol(symbol: string, specifier: string): string;
     rewriteSpecifier(specifier: string, inContextOfFile: string): string;
 }
@@ -41,7 +33,6 @@ export declare class NoopImportRewriter implements ImportRewriter {
 export declare class R3SymbolsImportRewriter implements ImportRewriter {
     private r3SymbolsPath;
     constructor(r3SymbolsPath: string);
-    shouldImportSymbol(symbol: string, specifier: string): boolean;
     rewriteSymbol(symbol: string, specifier: string): string;
     rewriteSpecifier(specifier: string, inContextOfFile: string): string;
 }

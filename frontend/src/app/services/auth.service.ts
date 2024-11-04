@@ -40,9 +40,10 @@ export class AuthService {
   }
 
   private setToken(token: string) {
-    this.token = token;
-    localStorage.setItem(this.token, token);
+    this.token = token;  // Store in memory
+    localStorage.setItem('jwtToken', token);  // Store in localStorage
   }
+  
 
   authenticateUser() {
     const token = this.getToken();
@@ -65,11 +66,13 @@ export class AuthService {
   }
 
   getToken(): string | null {
+    // Check if token exists in memory, if not fetch from localStorage
     if (!this.token) {
-     // this.token = localStorage.getItem(this.token);
+      this.token = localStorage.getItem('jwtToken');  // Assuming 'jwtToken' is your key in localStorage
     }
     return this.token;
   }
+  
 
   isTokenValid(token: string | null): boolean {
     if (!token) return false;

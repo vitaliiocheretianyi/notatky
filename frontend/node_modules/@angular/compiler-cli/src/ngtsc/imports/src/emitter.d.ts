@@ -3,7 +3,7 @@
  * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://angular.io/license
+ * found in the LICENSE file at https://angular.dev/license
  */
 import { Expression } from '@angular/compiler';
 import ts from 'typescript';
@@ -51,7 +51,11 @@ export declare enum ImportFlags {
      * paths may not be possible for those, hence this flag only applies when importing from a
      * declaration file.
      */
-    AllowRelativeDtsImports = 8
+    AllowRelativeDtsImports = 8,
+    /**
+     * Indicates that references coming from ambient imports are allowed.
+     */
+    AllowAmbientReferences = 16
 }
 /**
  * An emitter strategy has the ability to indicate which `ts.SourceFile` is being imported by the
