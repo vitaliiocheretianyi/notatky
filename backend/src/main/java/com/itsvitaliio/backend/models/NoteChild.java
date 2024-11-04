@@ -1,10 +1,11 @@
 package com.itsvitaliio.backend.models;
 
-import java.util.UUID;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -15,20 +16,27 @@ public class NoteChild {
     @Id
     private String id = UUID.randomUUID().toString();
 
-    @Column(name = "note_id", nullable = false)
-    private String noteId;
-
-    @Column(name = "child_id", nullable = false)
-    private String childId;
+    @ManyToOne
+    @JoinColumn(name = "note_id", nullable = false)
+    private Note note;
 
     @Column(name = "type", nullable = false)
     private String type;
 
-    @Column(name = "position", nullable = false)
-    private int position;
+    @Column(name = "child_id", nullable = false)
+    private String childId;
 
-    // Assuming you're not using a relationship to the Note entity directly
-    public void setNoteId(String noteId) {
-        this.noteId = noteId;
+    @Column(name = "position", nullable = false)  // Rename column to position
+    private Integer position;
+    
+    @Override
+    public String toString() {
+        return "NoteChild{" +
+                "id='" + id + '\'' +
+                ", note=" + note +
+                ", type='" + type + '\'' +
+                ", childId='" + childId + '\'' +
+                ", position=" + position +
+                '}';
     }
 }

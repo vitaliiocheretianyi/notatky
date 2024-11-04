@@ -19,7 +19,6 @@ public class RequestWrapper extends HttpServletRequestWrapper {
     public RequestWrapper(HttpServletRequest request) throws IOException {
         super(request);
         body = request.getReader().lines().collect(Collectors.joining(System.lineSeparator()));
-        // System.out.println("Request Body: " + body);
     }
 
     @Override
@@ -43,7 +42,6 @@ public class RequestWrapper extends HttpServletRequestWrapper {
 
             @Override
             public void setReadListener(ReadListener readListener) {
-                // No implementation needed
             }
         };
     }
@@ -51,9 +49,5 @@ public class RequestWrapper extends HttpServletRequestWrapper {
     @Override
     public BufferedReader getReader() throws IOException {
         return new BufferedReader(new InputStreamReader(getInputStream(), StandardCharsets.UTF_8));
-    }
-
-    public String getBody() {
-        return body;
     }
 }

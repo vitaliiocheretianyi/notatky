@@ -29,7 +29,7 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
         final String authorizationHeader = request.getHeader("Authorization");
-        // System.out.println("JWT Filter triggered");
+        System.out.println("JWT Filter triggered");
         String userId = null;
         String jwt = null;
 
@@ -37,24 +37,24 @@ public class JwtFilter extends OncePerRequestFilter {
             jwt = authorizationHeader.substring(7);
             userId = jwtUtil.extractUserId(jwt);
 
-            //System.out.println("Authenticating user " + userId);
+            System.out.println("Authenticating user " + userId);
         }
 
         if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 UserDetails userDetails = userService.loadUserById(userId);
                 if (jwtUtil.validateToken(jwt)) {
-                    // System.out.println("Token valid.");
+                    System.out.println("Token valid.");
                     UsernamePasswordAuthenticationToken authenticationToken =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-                    // System.out.println("User authenticated.");
+                    System.out.println("User authenticated.");
                 }else{
-                   // System.out.println("Token Expired!");
+                    System.out.println("Token Expired!");
                 }
             } catch (Exception ex) {
-                // System.out.println("User not found: " + userId);
+                System.out.println("User not found: " + userId);
             }
         }
         filterChain.doFilter(request, response);
