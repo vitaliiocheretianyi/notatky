@@ -1,0 +1,12 @@
+<div class="header">
+
+  <app-note-list 
+    (noteSelected)="selectNote($event)" 
+    (noteDeleted)="deleteNote($event)" 
+    [notes]="notes">
+  </app-note-list>
+  <button (click)="addNote()">Add Note</button> <!-- Add note button here -->
+
+  <!-- Add SettingsComponent inside HeaderComponent -->
+  <app-settings (actionSelected)="onActionSelected($event)"></app-settings>
+</div>

@@ -1,0 +1,40 @@
+# Node modules and build outputs for the frontend
+/frontend/node_modules
+/frontend/dist
+/frontend/.angular
+
+# IDE specific files
+/.idea/
+/*.iml
+/.vscode/
+/*.sublime-workspace
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Target folder for the Spring Boot app
+/backend/target
+
+# Maven wrapper files
+/backend/.mvn
+/backend/mvnw
+/backend/mvnw.cmd
+
+# Configuration files
+*.env
+.env.local
+.env.development
+.env.production
+
+# Other common files
+*.bak
+*.tmp
+
+# Exclude package-lock and yarn.lock if you want
+# /frontend/package-lock.json
+# /frontend/yarn.lock

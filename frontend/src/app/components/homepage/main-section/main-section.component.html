@@ -1,0 +1,39 @@
+<div>
+  <!-- Form to handle the note title -->
+  <div>
+    <form [formGroup]="noteForm">
+      <input formControlName="title" placeholder="Title" />
+    </form>
+  </div>
+
+
+    <!-- Draggable list for note children -->
+    <div cdkDropList (cdkDropListDropped)="drop($event)" class="note-list">
+      <!-- main-section.component.html -->
+      <div *ngFor="let child of noteChildren; let i = index; trackBy: trackByNoteChildId" cdkDrag>
+        <!-- Ensure (triggerImageUpload) event is bound -->
+        <app-text-child
+        *ngIf="child.type === 'text'"
+        [textChild]="child"
+        (textUpdated)="onTextUpdated($event)"
+        (textDeleted)="onTextDeleted($event)"
+        (createNewTextChild)="addOrInsertTextChild(i)"
+        (requestFocusOrDeletePreviousNode)="handleRequestFocusOrDeletePreviousNode(i)"
+        (triggerImageUpload)="onImageUpload($event.file, $event.textChildId)"
+        ></app-text-child>
+
+
+        <!-- Display image nodes -->
+        <app-image-child
+          *ngIf="child.type === 'image'"
+          [imageChild]="child"
+          (imageDeleted)="onImageDeleted($event)"
+        ></app-image-child>
+      </div>
+
+    </div>
+  
+    <!-- Add new text node button -->
+    <p class="add-content" (click)="addOrInsertTextChild()">+ Add New Content</p>
+  </div>
+  

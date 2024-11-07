@@ -1,0 +1,25 @@
+# Common files and directories
+**/node_modules
+**/dist
+**/.angular
+**/target
+**/.idea
+**/.vscode
+**/.DS_Store
+**/Thumbs.db
+
+# Ignore local environment configuration files
+**/*.env
+.env*
+
+# Logs
+*.log
+logs/
+
+# IDE-specific files
+*.iml
+*.sublime-workspace
+
+# Any temporary or backup files
+*.bak
+*.tmp
